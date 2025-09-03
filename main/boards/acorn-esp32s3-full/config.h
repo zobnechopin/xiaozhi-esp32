@@ -48,15 +48,15 @@
 #define LCD_TYPE_GC9A01_SERIAL
 #define DISPLAY_WIDTH   240
 #define DISPLAY_HEIGHT  240
-#define DISPLAY_MIRROR_X true    // 与ST7789相同的设置
+#define DISPLAY_MIRROR_X true
 #define DISPLAY_MIRROR_Y false
 #define DISPLAY_SWAP_XY false
-#define DISPLAY_INVERT_COLOR true    // 尝试true
+#define DISPLAY_INVERT_COLOR true
 #define DISPLAY_RGB_ORDER LCD_RGB_ELEMENT_ORDER_BGR  // 尝试RGB
 #define DISPLAY_OFFSET_X  0
 #define DISPLAY_OFFSET_Y  0
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
-#define DISPLAY_SPI_MODE 0    // 改为0，与ST7789相同
+#define DISPLAY_SPI_MODE 0
 #endif
 
 /* Camera pins */
@@ -81,6 +81,6 @@
 #define XCLK_FREQ_HZ 20000000
 
 // A MCP Test: Control a lamp
-#define LAMP_GPIO GPIO_NUM_46//GPIO_NUM_18
+#define LAMP_GPIO GPIO_NUM_46 //GPIO_NUM_46
 
 #endif // _BOARD_CONFIG_H_

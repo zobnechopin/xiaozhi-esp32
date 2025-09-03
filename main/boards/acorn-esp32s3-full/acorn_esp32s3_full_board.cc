@@ -25,43 +25,44 @@
 #include "power_manager.h"
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
-
-#if defined(LCD_TYPE_GC9A01_SERIAL)
 #include "esp_lcd_gc9a01.h"
-static const gc9a01_lcd_init_cmd_t gc9107_lcd_init_cmds[] = {
-    //  {cmd, { data }, data_size, delay_ms}
-    {0xfe, (uint8_t[]){0x00}, 0, 0},
-    {0xef, (uint8_t[]){0x00}, 0, 0},
-    {0xb0, (uint8_t[]){0xc0}, 1, 0},
-    {0xb1, (uint8_t[]){0x80}, 1, 0},
-    {0xb2, (uint8_t[]){0x27}, 1, 0},
-    {0xb3, (uint8_t[]){0x13}, 1, 0},
-    {0xb6, (uint8_t[]){0x19}, 1, 0},
-    {0xb7, (uint8_t[]){0x05}, 1, 0},
-    {0xac, (uint8_t[]){0xc8}, 1, 0},
-    {0xab, (uint8_t[]){0x0f}, 1, 0},
-    {0x3a, (uint8_t[]){0x05}, 1, 0},
-    {0xb4, (uint8_t[]){0x04}, 1, 0},
-    {0xa8, (uint8_t[]){0x08}, 1, 0},
-    {0xb8, (uint8_t[]){0x08}, 1, 0},
-    {0xea, (uint8_t[]){0x02}, 1, 0},
-    {0xe8, (uint8_t[]){0x2A}, 1, 0},
-    {0xe9, (uint8_t[]){0x47}, 1, 0},
-    {0xe7, (uint8_t[]){0x5f}, 1, 0},
-    {0xc6, (uint8_t[]){0x21}, 1, 0},
-    {0xc7, (uint8_t[]){0x15}, 1, 0},
-    {0xf0,
-    (uint8_t[]){0x1D, 0x38, 0x09, 0x4D, 0x92, 0x2F, 0x35, 0x52, 0x1E, 0x0C,
-                0x04, 0x12, 0x14, 0x1f},
-    14, 0},
-    {0xf1,
-    (uint8_t[]){0x16, 0x40, 0x1C, 0x54, 0xA9, 0x2D, 0x2E, 0x56, 0x10, 0x0D,
-                0x0C, 0x1A, 0x14, 0x1E},
-    14, 0},
-    {0xf4, (uint8_t[]){0x00, 0x00, 0xFF}, 3, 0},
-    {0xba, (uint8_t[]){0xFF, 0xFF}, 2, 0},
-};
-#endif
+
+// #if defined(LCD_TYPE_GC9A01_SERIAL)
+
+// static const gc9a01_lcd_init_cmd_t gc9107_lcd_init_cmds[] = {
+//     //  {cmd, { data }, data_size, delay_ms}
+//     {0xfe, (uint8_t[]){0x00}, 0, 0},
+//     {0xef, (uint8_t[]){0x00}, 0, 0},
+//     {0xb0, (uint8_t[]){0xc0}, 1, 0},
+//     {0xb1, (uint8_t[]){0x80}, 1, 0},
+//     {0xb2, (uint8_t[]){0x27}, 1, 0},
+//     {0xb3, (uint8_t[]){0x13}, 1, 0},
+//     {0xb6, (uint8_t[]){0x19}, 1, 0},
+//     {0xb7, (uint8_t[]){0x05}, 1, 0},
+//     {0xac, (uint8_t[]){0xc8}, 1, 0},
+//     {0xab, (uint8_t[]){0x0f}, 1, 0},
+//     {0x3a, (uint8_t[]){0x05}, 1, 0},
+//     {0xb4, (uint8_t[]){0x04}, 1, 0},
+//     {0xa8, (uint8_t[]){0x08}, 1, 0},
+//     {0xb8, (uint8_t[]){0x08}, 1, 0},
+//     {0xea, (uint8_t[]){0x02}, 1, 0},
+//     {0xe8, (uint8_t[]){0x2A}, 1, 0},
+//     {0xe9, (uint8_t[]){0x47}, 1, 0},
+//     {0xe7, (uint8_t[]){0x5f}, 1, 0},
+//     {0xc6, (uint8_t[]){0x21}, 1, 0},
+//     {0xc7, (uint8_t[]){0x15}, 1, 0},
+//     {0xf0,
+//     (uint8_t[]){0x1D, 0x38, 0x09, 0x4D, 0x92, 0x2F, 0x35, 0x52, 0x1E, 0x0C,
+//                 0x04, 0x12, 0x14, 0x1f},
+//     14, 0},
+//     {0xf1,
+//     (uint8_t[]){0x16, 0x40, 0x1C, 0x54, 0xA9, 0x2D, 0x2E, 0x56, 0x10, 0x0D,
+//                 0x0C, 0x1A, 0x14, 0x1E},
+//     14, 0},
+//     {0xf4, (uint8_t[]){0x00, 0x00, 0xFF}, 3, 0},
+//     {0xba, (uint8_t[]){0xFF, 0xFF}, 2, 0},
+// };
+// #endif
  
 #define TAG "AcornESP32S3Full"
 
@@ -158,6 +159,7 @@ private:
         });
         power_save_timer_->SetEnabled(true);
     }
+    
     void InitializeLcdDisplay() {
         esp_lcd_panel_io_handle_t panel_io = nullptr;
         esp_lcd_panel_handle_t panel = nullptr;
