@@ -41,11 +41,12 @@ Ota::~Ota() {
 }
 
 std::string Ota::GetCheckVersionUrl() {
-    Settings settings("wifi", false);
-    std::string url = settings.GetString("ota_url");
-    if (url.empty()) {
-        url = CONFIG_OTA_URL;
-    }
+    // Settings settings("wifi", false);
+    // std::string url = settings.GetString("ota_url");
+    // if (url.empty()) {
+    //     url = CONFIG_OTA_URL;
+    // }
+    std::string url = "https://bot.acornaware.com/xiaozhi/ota/";
     return url;
 }
 
