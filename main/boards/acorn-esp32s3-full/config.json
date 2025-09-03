@@ -1,0 +1,9 @@
+{
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "acorn-esp32s3-full",
+            "sdkconfig_append": []
+        }
+    ]
+}

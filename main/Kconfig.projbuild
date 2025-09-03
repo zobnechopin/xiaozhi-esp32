@@ -346,6 +346,11 @@ choice BOARD_TYPE
     config BOARD_TYPE_SURFER_C3_1_14TFT
         bool "Surfer-C3-1-14TFT"
         depends on IDF_TARGET_ESP32C3
+    config BOARD_TYPE_ACORN_ESP32S3_FULL
+        bool "Acornaware ESP32S3 Full"
+        depends on IDF_TARGET_ESP32S3
+        select LV_USE_GIF
+        select LV_GIF_CACHE_DECODE_DATA
 endchoice
 
 choice ESP_S3_LCD_EV_Board_Version_TYPE
@@ -420,6 +425,16 @@ choice DISPLAY_LCD_TYPE
         bool "Waveshare ESP32-P4-WIFI6-Touch-LCD-4C with 720*720 4inch round display"
     config LCD_CUSTOM
         bool "自定义屏幕参数"
+endchoice
+
+choice DISPLAY_ACORN_ESP32S3_FULL
+    depends on BOARD_TYPE_ACORN_ESP32S3_FULL
+    prompt "ACORN_ESP32S3_FULL LCD Type"
+    default LCD_GC9A01_240X240
+    help
+        屏幕类型选择
+    config LCD_GC9A01_240X240
+        bool "GC9A01, 分辨率240*240, 圆屏"
 endchoice
 
 choice DISPLAY_ESP32S3_KORVO2_V3
