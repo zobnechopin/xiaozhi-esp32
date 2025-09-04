@@ -34,6 +34,8 @@ protected:
     lv_obj_t* container_ = nullptr;
     lv_obj_t* side_bar_ = nullptr;
     lv_obj_t* preview_image_ = nullptr;
+    lv_obj_t* gif_container_ = nullptr;
+    lv_obj_t* gif_widget_ = nullptr;
 
     DisplayFonts fonts_;
     ThemeColors current_theme_;
@@ -57,6 +59,7 @@ public:
 
     // Add theme switching function
     virtual void SetTheme(const std::string& theme_name) override;
+
 };
 
 // RGB LCD显示器

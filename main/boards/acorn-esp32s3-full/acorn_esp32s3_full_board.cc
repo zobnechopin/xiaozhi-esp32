@@ -9,8 +9,9 @@
 #include "lamp_controller.h"
 // #include "test_image.h"  // 新增：包含测试图片头文件
 // #include "test_gif.h"  // 新增：包含测试GIF头文件
-// #include "cat_idle.h"
+#include "cat_idle.h"
 // #include "cat_surprise.h"
+#include "facetest.h"  // 添加这行
  
 #include "led/single_led.h"
 #include "esp32_camera.h"
@@ -26,6 +27,7 @@
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
 #include "esp_lcd_gc9a01.h"
+
 
 // #if defined(LCD_TYPE_GC9A01_SERIAL)
 
@@ -184,12 +186,7 @@ private:
 #if defined(LCD_TYPE_ILI9341_SERIAL)
         ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(panel_io, &panel_config, &panel));
 #elif defined(LCD_TYPE_GC9A01_SERIAL)
-        // 暂时不使用自定义初始化命令，使用标准GC9A01初始化
-        // gc9a01_vendor_config_t gc9107_vendor_config = {
-        //     .init_cmds = gc9107_lcd_init_cmds,
-        //     .init_cmds_size = sizeof(gc9107_lcd_init_cmds) / sizeof(gc9a01_lcd_init_cmd_t),
-        // };
-        // panel_config.vendor_config = &gc9107_vendor_config;
+
         ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(panel_io, &panel_config, &panel));
 #else
         ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
@@ -215,84 +212,19 @@ private:
 #endif
                                     });
         
-        // // 现在显示全屏测试图片
-        // if (display_) {
-        //     ESP_LOGI(TAG, "Initializing test image");
-        //     init_test_fullscreen_image();  // 初始化图片数据
-            
-        //     ESP_LOGI(TAG, "Image info: %dx%d, data_size=%lu", 
-        //         test_fullscreen_image.header.w, 
-        //         test_fullscreen_image.header.h, 
-        //         (unsigned long)test_fullscreen_image.data_size);
-        //     ESP_LOGI(TAG, "Display info: %dx%d", DISPLAY_WIDTH, DISPLAY_HEIGHT);
-            
-        //     display_->ShowFullscreenImage(&test_fullscreen_image);  // 显示全屏图片
-        //     ESP_LOGI(TAG, "Fullscreen test image displayed");
-        // }
 
-        // 显示GIF动画测试 - 暂时注释掉
-        // if (display_) {
-        //     ESP_LOGI(TAG, "Testing cat_idle GIF animation");
-        //     display_->ShowGifAnimation(&cat_idle);
-        //     // 暂时注释掉连续播放，避免崩溃
-        //     // display_->ShowSequentialGifs(&cat_idle, &cat_surprise);
-        // }
         
-        // 颜色校验测试：循环显示全屏红色、绿色、蓝色各5秒
-        // ESP_LOGI(TAG, "Starting color calibration test - LOOP MODE");
-        
-        // // 创建颜色缓冲区
-        // size_t buffer_size = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2; // 16位颜色
-        // uint16_t* color_buffer = (uint16_t*)malloc(buffer_size);
-        
-        // if (color_buffer != NULL) {
-        //     // 无限循环显示颜色
-        //     while (true) {
-        //         // 显示红色 5秒
-        //         ESP_LOGI(TAG, "Displaying RED screen");
-        //         for (int i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
-        //             color_buffer[i] = 0xF800;  // 红色 (RGB565: 11111 000000 00000)
-        //         }
-        //         esp_lcd_panel_draw_bitmap(panel, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, color_buffer);
-        //         vTaskDelay(pdMS_TO_TICKS(5000));
-                
-        //         // 显示绿色 5秒
-        //         ESP_LOGI(TAG, "Displaying GREEN screen");
-        //         for (int i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
-        //             color_buffer[i] = 0x07E0;  // 绿色 (RGB565: 00000 111111 00000)
-        //         }
-        //         esp_lcd_panel_draw_bitmap(panel, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, color_buffer);
-        //         vTaskDelay(pdMS_TO_TICKS(5000));
-                
-        //         // 显示蓝色 5秒
-        //         ESP_LOGI(TAG, "Displaying BLUE screen");
-        //         for (int i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
-        //             color_buffer[i] = 0x001F;  // 蓝色 (RGB565: 00000 000000 11111)
-        //         }
-        //         esp_lcd_panel_draw_bitmap(panel, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, color_buffer);
-        //         vTaskDelay(pdMS_TO_TICKS(5000));
-        //     }
-            
-        //     // 这行代码永远不会执行到，但保留以防将来需要
-        //     free(color_buffer);
-        //     ESP_LOGI(TAG, "Color calibration test completed");
-        // } else {
-        //     ESP_LOGE(TAG, "Failed to allocate buffer for color test");
-        // }
-        
-        // 注释掉全屏测试图片
+        // 完全注释掉全屏测试图片
         // if (display_) {
         //     init_test_fullscreen_image();  // 初始化图片数据（正确的函数名）
         //     display_->ShowFullscreenImage(&test_fullscreen_image);  // 显示全屏图片
         //     ESP_LOGI(TAG, "Fullscreen test image displayed");
         // }
 
-        // 显示GIF动画测试
+        // 完全注释掉GIF动画测试
         // if (display_) {
-        //     ESP_LOGI(TAG, "Testing cat_idle GIF animation");
-        //     display_->ShowGifAnimation(&cat_idle);
-        //     // 暂时注释掉连续播放，避免崩溃
-        //     // display_->ShowSequentialGifs(&cat_idle, &cat_surprise);
+        //     ESP_LOGI(TAG, "Testing facetest small GIF animation (176x120)");
+        //     display_->ShowGifAnimation(&facetest);
         // }
     }
 
