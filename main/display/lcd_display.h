@@ -41,6 +41,9 @@ protected:
     ThemeColors current_theme_;
 
     void SetupUI();
+#ifdef CONFIG_ENABLE_HALO_UI
+    void SetupHaloUI();  // 我们的Halo UI
+#endif
     virtual bool Lock(int timeout_ms = 0) override;
     virtual void Unlock() override;
 

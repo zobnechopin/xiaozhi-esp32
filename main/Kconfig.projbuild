@@ -455,6 +455,12 @@ config USE_WECHAT_MESSAGE_STYLE
     help
         使用微信聊天界面风格
 
+config ENABLE_HALO_UI
+    bool "Enable Halo UI (Custom GIF Background UI)"
+    default y
+    help
+        Enable custom Halo UI with animated GIF background and minimal status bar
+
 config USE_ESP_WAKE_WORD
     bool "Enable Wake Word Detection (without AFE)"
     default n
