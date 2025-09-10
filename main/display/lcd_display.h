@@ -40,10 +40,16 @@ protected:
     lv_obj_t* emoji_image_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     esp_timer_handle_t preview_timer_ = nullptr;
+    lv_obj_t* gif_container_ = nullptr;
+    lv_obj_t* gif_widget_ = nullptr;
+
 
     ThemeColors current_theme_;
 
     void SetupUI();
+#ifdef CONFIG_ENABLE_HALO_UI
+    void SetupHaloUI();  // 我们的Halo UI
+#endif
     virtual bool Lock(int timeout_ms = 0) override;
     virtual void Unlock() override;
 
@@ -61,6 +67,7 @@ public:
 
     // Add theme switching function
     virtual void SetTheme(const std::string& theme_name) override;
+
 };
 
 // SPI LCD显示器

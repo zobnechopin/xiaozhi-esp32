@@ -16,6 +16,7 @@
 #include <driver/gpio.h>
 #include <arpa/inet.h>
 #include <font_awesome.h>
+#include <wifi_station.h>
 
 #define TAG "Application"
 
@@ -387,18 +388,31 @@ void Application::StopListening() {
 }
 
 void Application::Start() {
+    ESP_LOGI(TAG, "DEBUG: Application::Start() begin");
+    
     auto& board = Board::GetInstance();
+    ESP_LOGI(TAG, "DEBUG: Got board instance");
+    
     SetDeviceState(kDeviceStateStarting);
+    ESP_LOGI(TAG, "DEBUG: SetDeviceState(kDeviceStateStarting) completed");
 
     /* Setup the display */
     auto display = board.GetDisplay();
+    ESP_LOGI(TAG, "DEBUG: Got display instance");
 
     /* Setup the audio service */
     auto codec = board.GetAudioCodec();
+    ESP_LOGI(TAG, "DEBUG: Got audio codec");
+    
     audio_service_.Initialize(codec);
+    ESP_LOGI(TAG, "DEBUG: Audio service initialized");
+    
     audio_service_.Start();
+    ESP_LOGI(TAG, "DEBUG: Audio service started");
 
     AudioServiceCallbacks callbacks;
+    ESP_LOGI(TAG, "DEBUG: Creating audio callbacks");
+    
     callbacks.on_send_queue_available = [this]() {
         xEventGroupSetBits(event_group_, MAIN_EVENT_SEND_AUDIO);
     };
@@ -408,23 +422,46 @@ void Application::Start() {
     callbacks.on_vad_change = [this](bool speaking) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_VAD_CHANGE);
     };
+    ESP_LOGI(TAG, "DEBUG: Audio callbacks created");
+    
     audio_service_.SetCallbacks(callbacks);
+    ESP_LOGI(TAG, "DEBUG: Audio callbacks set");
 
     /* Start the clock timer to update the status bar */
+    ESP_LOGI(TAG, "DEBUG: Starting clock timer");
     esp_timer_start_periodic(clock_timer_handle_, 1000000);
+    ESP_LOGI(TAG, "DEBUG: Clock timer started successfully");
 
-    /* Wait for the network to be ready */
+    // 在网络启动后稍等一下再检查版本
     board.StartNetwork();
+    ESP_LOGI(TAG, "DEBUG: Network started");
+
+    // 等待网络稳定
+    vTaskDelay(pdMS_TO_TICKS(2000));  // 等待2秒
 
     // Update the status bar immediately to show the network state
+    ESP_LOGI(TAG, "DEBUG: Updating status bar");
     display->UpdateStatusBar(true);
+    ESP_LOGI(TAG, "DEBUG: Status bar updated");
 
     // Check for new assets version
     CheckAssetsVersion();
 
     // Check for new firmware version or get the MQTT broker address
+    ESP_LOGI(TAG, "DEBUG: Creating OTA instance");
+    
+    // 将ota声明移到外面，扩大作用域
     Ota ota;
-    CheckNewVersion(ota);
+    
+    // 检查WiFi是否已连接再执行版本检查
+    if (WifiStation::GetInstance().IsConnected()) {
+        ESP_LOGI(TAG, "DEBUG: Checking new version");
+        CheckNewVersion(ota);
+        ESP_LOGI(TAG, "DEBUG: Version check completed");
+    } else {
+        ESP_LOGI(TAG, "WiFi not connected, skipping version check");
+        ESP_LOGI(TAG, "OTA instance created without version check");
+    }
 
     // Initialize the protocol
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);

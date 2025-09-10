@@ -12,6 +12,9 @@
 #include <cstring>
 
 #include "board.h"
+#ifdef CONFIG_ENABLE_HALO_UI
+#include "boards/acorn-esp32s3-full/facetest.h"
+#endif
 
 #define TAG "LcdDisplay"
 
@@ -721,12 +724,20 @@ void LcdDisplay::SetPreviewImage(const lv_img_dsc_t* img_dsc) {
 }
 #else
 void LcdDisplay::SetupUI() {
+    #ifdef CONFIG_ENABLE_HALO_UI
+    ESP_LOGI(TAG, "🌟 USING HALO UI 🌟");
+    SetupHaloUI();
+    return;
+    #endif
+    ESP_LOGI(TAG, "Using Original UI - Standard Chat Mode");
     DisplayLockGuard lock(this);
 
     auto screen = lv_screen_active();
     lv_obj_set_style_text_font(screen, style_.text_font, 0);
     lv_obj_set_style_text_color(screen, current_theme_.text, 0);
     lv_obj_set_style_bg_color(screen, current_theme_.background, 0);
+
+    // 原始UI代码（没有GIF）
 
     /* Container */
     container_ = lv_obj_create(screen);
@@ -735,17 +746,18 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_pad_all(container_, 0, 0);
     lv_obj_set_style_border_width(container_, 0, 0);
     lv_obj_set_style_pad_row(container_, 0, 0);
-    lv_obj_set_style_bg_color(container_, current_theme_.background, 0);
+    lv_obj_set_style_bg_opa(container_, LV_OPA_TRANSP, 0);  // 透明
     lv_obj_set_style_border_color(container_, current_theme_.border, 0);
 
     /* Status bar */
     status_bar_ = lv_obj_create(container_);
     lv_obj_set_size(status_bar_, LV_HOR_RES, style_.text_font->line_height);
     lv_obj_set_style_radius(status_bar_, 0, 0);
-    lv_obj_set_style_bg_color(status_bar_, current_theme_.background, 0);
-    lv_obj_set_style_text_color(status_bar_, current_theme_.text, 0);
+    lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);  // 透明
+    lv_obj_set_style_text_color(status_bar_, lv_color_white(), 0);  // 白色文字在黑背景上
     
-    /* Content */
+    // 注释掉content_相关代码，只保留状态栏
+    
     content_ = lv_obj_create(container_);
     lv_obj_set_scrollbar_mode(content_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_radius(content_, 0, 0);
@@ -755,8 +767,8 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_bg_color(content_, current_theme_.chat_background, 0);
     lv_obj_set_style_border_color(content_, current_theme_.border, 0); // Border color for content
 
-    lv_obj_set_flex_flow(content_, LV_FLEX_FLOW_COLUMN); // 垂直布局（从上到下）
-    lv_obj_set_flex_align(content_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_EVENLY); // 子对象居中对齐，等距分布
+    lv_obj_set_flex_flow(content_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(content_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_EVENLY);
 
     emoji_box_ = lv_obj_create(content_);
     lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -784,23 +796,23 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0); // 设置文本居中对齐
     lv_obj_set_style_text_color(chat_message_label_, current_theme_.text, 0);
 
-    /* Status bar */
+    /* Status bar elements */
     lv_obj_set_flex_flow(status_bar_, LV_FLEX_FLOW_ROW);
     lv_obj_set_style_pad_all(status_bar_, 0, 0);
     lv_obj_set_style_border_width(status_bar_, 0, 0);
     lv_obj_set_style_pad_column(status_bar_, 0, 0);
     lv_obj_set_style_pad_left(status_bar_, 2, 0);
     lv_obj_set_style_pad_right(status_bar_, 2, 0);
+    lv_obj_set_flex_align(status_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     network_label_ = lv_label_create(status_bar_);
     lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(network_label_, current_theme_.text, 0);
-
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_flex_grow(notification_label_, 1);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(notification_label_, current_theme_.text, 0);
+    lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);  // 改为白色
     lv_label_set_text(notification_label_, "");
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
@@ -808,11 +820,12 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_flex_grow(status_label_, 1);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(status_label_, current_theme_.text, 0);
+    lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);  // 改为白色
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
 
     mute_label_ = lv_label_create(status_bar_);
     lv_label_set_text(mute_label_, "");
+  
     lv_obj_set_style_text_font(mute_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(mute_label_, current_theme_.text, 0);
 
@@ -821,11 +834,14 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_font(battery_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(battery_label_, current_theme_.text, 0);
 
+
+    // 修复低电量提示的边框问题
     low_battery_popup_ = lv_obj_create(screen);
     lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, style_.text_font->line_height * 2);
     lv_obj_align(low_battery_popup_, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_set_style_bg_color(low_battery_popup_, current_theme_.low_battery, 0);
+    lv_obj_set_style_border_width(low_battery_popup_, 0, 0);  // 移除边框
     lv_obj_set_style_radius(low_battery_popup_, 10, 0);
     low_battery_label_ = lv_label_create(low_battery_popup_);
     lv_label_set_text(low_battery_label_, Lang::Strings::BATTERY_NEED_CHARGE);
@@ -1095,3 +1111,101 @@ void LcdDisplay::SetTheme(const std::string& theme_name) {
     // No errors occurred. Save theme to settings
     Display::SetTheme(theme_name);
 }
+
+#ifdef CONFIG_ENABLE_HALO_UI
+void LcdDisplay::SetupHaloUI() {
+    DisplayLockGuard lock(this);
+
+    auto screen = lv_screen_active();
+    lv_obj_set_style_text_font(screen, fonts_.text_font, 0);
+    lv_obj_set_style_text_color(screen, lv_color_white(), 0);
+    lv_obj_set_style_bg_color(screen, lv_color_black(), 0);  // Halo UI 黑色背景
+
+    // 创建 Halo GIF 背景
+    ESP_LOGI(TAG, "Creating Halo UI with GIF background");
+    gif_widget_ = lv_gif_create(screen);
+    if (gif_widget_) {
+        lv_gif_set_src(gif_widget_, &facetest);
+        lv_obj_set_size(gif_widget_, 176, 120);
+        
+        // 计算居中位置
+        int gif_x = (LV_HOR_RES - 176) / 2;
+        int gif_y = 40;  // 状态栏下方
+        lv_obj_set_pos(gif_widget_, gif_x, gif_y);
+        
+        ESP_LOGI(TAG, "Halo GIF background loaded at (%d, %d)", gif_x, gif_y);
+    }
+
+    /* Container - 透明容器 */
+    container_ = lv_obj_create(screen);
+    lv_obj_set_size(container_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_set_flex_flow(container_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_all(container_, 0, 0);
+    lv_obj_set_style_border_width(container_, 0, 0);
+    lv_obj_set_style_pad_row(container_, 0, 0);
+    lv_obj_set_style_bg_opa(container_, LV_OPA_TRANSP, 0);  // 透明
+    lv_obj_set_style_border_color(container_, current_theme_.border, 0);
+
+    /* Halo Status bar - 透明状态栏 */
+    status_bar_ = lv_obj_create(container_);
+    lv_obj_set_size(status_bar_, LV_HOR_RES, fonts_.text_font->line_height);
+    lv_obj_set_style_radius(status_bar_, 0, 0);
+    lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);  // 透明
+    lv_obj_set_style_text_color(status_bar_, lv_color_white(), 0);  // 白色文字
+
+    /* Halo Status bar elements */
+    lv_obj_set_flex_flow(status_bar_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_all(status_bar_, 0, 0);
+    lv_obj_set_style_border_width(status_bar_, 0, 0);
+    lv_obj_set_style_pad_column(status_bar_, 0, 0);
+    lv_obj_set_style_pad_left(status_bar_, 2, 0);
+    lv_obj_set_style_pad_right(status_bar_, 2, 0);
+    lv_obj_set_flex_align(status_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    network_label_ = lv_label_create(status_bar_);
+    lv_label_set_text(network_label_, "");
+    lv_obj_set_style_text_font(network_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
+
+    notification_label_ = lv_label_create(status_bar_);
+    lv_obj_set_flex_grow(notification_label_, 1);
+    lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
+    lv_label_set_text(notification_label_, "");
+    lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+
+    status_label_ = lv_label_create(status_bar_);
+    lv_obj_set_flex_grow(status_label_, 1);
+    lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
+    lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
+
+    mute_label_ = lv_label_create(status_bar_);
+    lv_label_set_text(mute_label_, "");
+    lv_obj_set_style_text_font(mute_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
+
+    battery_label_ = lv_label_create(status_bar_);
+    lv_label_set_text(battery_label_, "");
+    lv_obj_set_style_text_font(battery_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
+
+    // Halo 低电量提示（无边框）
+    low_battery_popup_ = lv_obj_create(screen);
+    lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, fonts_.text_font->line_height * 2);
+    lv_obj_align(low_battery_popup_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(low_battery_popup_, current_theme_.low_battery, 0);
+    lv_obj_set_style_border_width(low_battery_popup_, 0, 0);  // Halo UI 无边框
+    lv_obj_set_style_radius(low_battery_popup_, 10, 0);
+    low_battery_label_ = lv_label_create(low_battery_popup_);
+    lv_label_set_text(low_battery_label_, Lang::Strings::BATTERY_NEED_CHARGE);
+    lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
+    lv_obj_center(low_battery_label_);
+    lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
+
+    ESP_LOGI(TAG, "Halo UI setup completed");
+}
+#endif
+
