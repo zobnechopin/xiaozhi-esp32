@@ -5,7 +5,8 @@
 #include <esp_timer.h>
 #include <driver/gpio.h>
 #include <esp_adc/adc_oneshot.h>
-#include <driver/adc.h>
+// 移除已弃用的ADC驱动
+// #include <driver/adc.h>
 
 class PowerManager {
 private:

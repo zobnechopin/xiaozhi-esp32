@@ -109,12 +109,6 @@ SpiLcdDisplay::SpiLcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_h
                            int width, int height, int offset_x, int offset_y, bool mirror_x, bool mirror_y, bool swap_xy)
     : LcdDisplay(panel_io, panel, width, height) {
 
-    // draw white
-    std::vector<uint16_t> buffer(width_, 0xFFFF);
-    for (int y = 0; y < height_; y++) {
-        esp_lcd_panel_draw_bitmap(panel_, 0, y, width_, y + 1, buffer.data());
-    }
-
     // Set the display to on
     ESP_LOGI(TAG, "Turning display on");
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_, true));
@@ -137,6 +131,7 @@ SpiLcdDisplay::SpiLcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_h
     ESP_LOGI(TAG, "Initialize LVGL port");
     lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     port_cfg.task_priority = 1;
+    port_cfg.timer_period_ms = 50;  // 添加这行，设置为50ms (20Hz)
     lvgl_port_init(&port_cfg);
 
     ESP_LOGI(TAG, "Adding LCD display");
@@ -1117,7 +1112,7 @@ void LcdDisplay::SetupHaloUI() {
     DisplayLockGuard lock(this);
 
     auto screen = lv_screen_active();
-    lv_obj_set_style_text_font(screen, fonts_.text_font, 0);
+    lv_obj_set_style_text_font(screen, style_.text_font, 0);
     lv_obj_set_style_text_color(screen, lv_color_white(), 0);
     lv_obj_set_style_bg_color(screen, lv_color_black(), 0);  // Halo UI 黑色背景
 
@@ -1148,7 +1143,7 @@ void LcdDisplay::SetupHaloUI() {
 
     /* Halo Status bar - 透明状态栏 */
     status_bar_ = lv_obj_create(container_);
-    lv_obj_set_size(status_bar_, LV_HOR_RES, fonts_.text_font->line_height);
+    lv_obj_set_size(status_bar_, LV_HOR_RES, style_.text_font->line_height);
     lv_obj_set_style_radius(status_bar_, 0, 0);
     lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);  // 透明
     lv_obj_set_style_text_color(status_bar_, lv_color_white(), 0);  // 白色文字
@@ -1164,7 +1159,7 @@ void LcdDisplay::SetupHaloUI() {
 
     network_label_ = lv_label_create(status_bar_);
     lv_label_set_text(network_label_, "");
-    lv_obj_set_style_text_font(network_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_font(network_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
 
     notification_label_ = lv_label_create(status_bar_);
@@ -1183,18 +1178,18 @@ void LcdDisplay::SetupHaloUI() {
 
     mute_label_ = lv_label_create(status_bar_);
     lv_label_set_text(mute_label_, "");
-    lv_obj_set_style_text_font(mute_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_font(mute_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
 
     battery_label_ = lv_label_create(status_bar_);
     lv_label_set_text(battery_label_, "");
-    lv_obj_set_style_text_font(battery_label_, fonts_.icon_font, 0);
+    lv_obj_set_style_text_font(battery_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
 
     // Halo 低电量提示（无边框）
     low_battery_popup_ = lv_obj_create(screen);
     lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, fonts_.text_font->line_height * 2);
+    lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, style_.text_font->line_height * 2);
     lv_obj_align(low_battery_popup_, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_style_bg_color(low_battery_popup_, current_theme_.low_battery, 0);
     lv_obj_set_style_border_width(low_battery_popup_, 0, 0);  // Halo UI 无边框

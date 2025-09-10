@@ -1,6 +1,7 @@
 #include "wifi_board.h"
 #include "codecs/no_audio_codec.h"
 #include "display/lcd_display.h"
+#include "display/emoji_collection.h"  // 添加这个头文件
 #include "system_reset.h"
 #include "application.h"
 #include "button.h"
@@ -9,9 +10,9 @@
 #include "lamp_controller.h"
 // #include "test_image.h"  // 新增：包含测试图片头文件
 // #include "test_gif.h"  // 新增：包含测试GIF头文件
-#include "cat_idle.h"
+// #include "cat_idle.h"
 // #include "cat_surprise.h"
-#include "facetest.h"  // 添加这行
+// #include "facetest.h"  // 添加这行
  
 #include "led/single_led.h"
 #include "esp32_camera.h"
@@ -135,9 +136,8 @@ private:
     }
 
     void InitializePowerSaveTimer() {
-        rtc_gpio_init(GPIO_NUM_48);
-        rtc_gpio_set_direction(GPIO_NUM_48, RTC_GPIO_MODE_OUTPUT_ONLY);
-        rtc_gpio_set_level(GPIO_NUM_48, 1);
+        // 绕过 GPIO48 的 RTCIO 配置（本板未使用或非必须，避免无意义报错）
+        ESP_LOGI(TAG, "Skipping RTCIO config on GPIO 48");
 
         power_save_timer_ = new PowerSaveTimer(-1, 60, 36000);
         power_save_timer_->OnEnterSleepMode([this]() {
@@ -153,9 +153,7 @@ private:
         });
         power_save_timer_->OnShutdownRequest([this]() {
             ESP_LOGI(TAG, "Shutting down");
-            rtc_gpio_set_level(GPIO_NUM_48, 0);
-            // 启用保持功能，确保睡眠期间电平不变
-            rtc_gpio_hold_en(GPIO_NUM_48);
+            // 跳过GPIO48拉低与保持逻辑
             esp_lcd_panel_disp_on_off(panel_, false); //关闭显示
             esp_deep_sleep_start();
         });
@@ -199,21 +197,27 @@ private:
         esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
         esp_lcd_panel_disp_on_off(panel, true);  // 确保显示开启
         
-        // 先创建 display_ 对象
+        // 先创建 display_ 对象（使用简单的方式，不设置自定义样式）
         display_ = new SpiLcdDisplay(panel_io, panel,
-                                    DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-                                    {
-                                        .text_font = &font_puhui_16_4,
-                                        .icon_font = &font_awesome_16_4,
+                                    DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
+                                    DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
+        
+        // 创建后设置自定义样式
+        if (display_) {
+            EmojiCollection* emoji_collection;
 #if CONFIG_USE_WECHAT_MESSAGE_STYLE
-                                        .emoji_font = font_emoji_32_init(),
+            emoji_collection = new Twemoji32();
 #else
-                                        .emoji_font = DISPLAY_HEIGHT >= 240 ? font_emoji_64_init() : font_emoji_32_init(),
+            emoji_collection = DISPLAY_HEIGHT >= 240 ? static_cast<EmojiCollection*>(new Twemoji64()) : static_cast<EmojiCollection*>(new Twemoji32());
 #endif
-                                    });
-        
+            DisplayStyle custom_style = {
+                .text_font = &font_puhui_16_4,
+                .icon_font = &font_awesome_16_4,
+                .emoji_collection = emoji_collection,
+            };
+            display_->UpdateStyle(custom_style);
+        }
 
-        
         // 完全注释掉全屏测试图片
         // if (display_) {
         //     init_test_fullscreen_image();  // 初始化图片数据（正确的函数名）
@@ -267,8 +271,6 @@ public:
         if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {
             GetBacklight()->SetBrightness(100);
         }
-        
-
     }
 
     virtual Led* GetLed() override {
