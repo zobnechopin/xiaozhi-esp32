@@ -13,7 +13,7 @@
 
 #include "board.h"
 #ifdef CONFIG_ENABLE_HALO_UI
-#include "boards/acorn-esp32s3-full/facetest.h"
+#include "boards/acorn-esp32s3-full/acorn_assets.h"  // 使用我们的资源
 #endif
 
 #define TAG "LcdDisplay"
@@ -719,11 +719,11 @@ void LcdDisplay::SetPreviewImage(const lv_img_dsc_t* img_dsc) {
 }
 #else
 void LcdDisplay::SetupUI() {
-    #ifdef CONFIG_ENABLE_HALO_UI
-    ESP_LOGI(TAG, "🌟 USING HALO UI 🌟");
+#ifdef CONFIG_ENABLE_HALO_UI
+    ESP_LOGI(TAG, "🌟 USING ENHANCED HALO UI 🌟");
     SetupHaloUI();
     return;
-    #endif
+#endif
     ESP_LOGI(TAG, "Using Original UI - Standard Chat Mode");
     DisplayLockGuard lock(this);
 
@@ -1116,19 +1116,25 @@ void LcdDisplay::SetupHaloUI() {
     lv_obj_set_style_text_color(screen, lv_color_white(), 0);
     lv_obj_set_style_bg_color(screen, lv_color_black(), 0);  // Halo UI 黑色背景
 
-    // 创建 Halo GIF 背景
-    ESP_LOGI(TAG, "Creating Halo UI with GIF background");
+    // 创建 Halo GIF 背景 - 使用我们的资源
+    ESP_LOGI(TAG, "Creating Enhanced Halo UI with custom GIF background");
     gif_widget_ = lv_gif_create(screen);
     if (gif_widget_) {
-        lv_gif_set_src(gif_widget_, &facetest);
-        lv_obj_set_size(gif_widget_, 176, 120);
-        
-        // 计算居中位置
-        int gif_x = (LV_HOR_RES - 176) / 2;
-        int gif_y = 40;  // 状态栏下方
-        lv_obj_set_pos(gif_widget_, gif_x, gif_y);
-        
-        ESP_LOGI(TAG, "Halo GIF background loaded at (%d, %d)", gif_x, gif_y);
+        // 使用我们的 idle_status_1 替代 facetest
+        const lv_image_dsc_t* idle_gif = AcornAssets::GetGif("idle_status_1");
+        if (idle_gif) {
+            lv_gif_set_src(gif_widget_, idle_gif);
+            lv_obj_set_size(gif_widget_, 176, 120);
+            
+            // 计算居中位置
+            int gif_x = (LV_HOR_RES - 176) / 2;
+            int gif_y = 40;  // 状态栏下方
+            lv_obj_set_pos(gif_widget_, gif_x, gif_y);
+            
+            ESP_LOGI(TAG, "Custom GIF background loaded at (%d, %d)", gif_x, gif_y);
+        } else {
+            ESP_LOGE(TAG, "Failed to load idle_status_1 GIF");
+        }
     }
 
     /* Container - 透明容器 */
@@ -1157,11 +1163,13 @@ void LcdDisplay::SetupHaloUI() {
     lv_obj_set_style_pad_right(status_bar_, 2, 0);
     lv_obj_set_flex_align(status_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
+    // 左侧：网络状态（保持原有功能）
     network_label_ = lv_label_create(status_bar_);
     lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, style_.icon_font, 0);
     lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
 
+    // 中间：通知和状态文字
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_flex_grow(notification_label_, 1);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
@@ -1176,17 +1184,31 @@ void LcdDisplay::SetupHaloUI() {
     lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
 
-    mute_label_ = lv_label_create(status_bar_);
-    lv_label_set_text(mute_label_, "");
-    lv_obj_set_style_text_font(mute_label_, style_.icon_font, 0);
-    lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
+    // 右侧：音量图标（使用我们的图标）
+    mute_label_ = lv_img_create(status_bar_);  // 改为 lv_img_create
+    lv_obj_add_flag(mute_label_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
 
-    battery_label_ = lv_label_create(status_bar_);
-    lv_label_set_text(battery_label_, "");
-    lv_obj_set_style_text_font(battery_label_, style_.icon_font, 0);
-    lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
+    // 右侧：电池图标（使用我们的图标）
+    battery_label_ = lv_img_create(status_bar_);  // 改为 lv_img_create
+    lv_obj_add_flag(battery_label_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
 
-    // Halo 低电量提示（无边框）
+    // 底部容器（新增）
+    bottom_container_ = lv_obj_create(screen);
+    lv_obj_set_size(bottom_container_, LV_HOR_RES, 30);
+    lv_obj_align(bottom_container_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_opa(bottom_container_, LV_OPA_TRANSP, 0);
+    lv_obj_add_flag(bottom_container_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
+
+    bottom_icon_ = lv_img_create(bottom_container_);
+    lv_obj_center(bottom_icon_);
+    lv_obj_add_flag(bottom_icon_, LV_OBJ_FLAG_HIDDEN);
+
+    bottom_label_ = lv_label_create(bottom_container_);
+    lv_obj_center(bottom_label_);
+    lv_obj_set_style_text_color(bottom_label_, lv_color_white(), 0);
+    lv_obj_add_flag(bottom_label_, LV_OBJ_FLAG_HIDDEN);
+
+    // Halo 低电量提示（保持原有功能）
     low_battery_popup_ = lv_obj_create(screen);
     lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, style_.text_font->line_height * 2);
@@ -1200,7 +1222,7 @@ void LcdDisplay::SetupHaloUI() {
     lv_obj_center(low_battery_label_);
     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
 
-    ESP_LOGI(TAG, "Halo UI setup completed");
+    ESP_LOGI(TAG, "Enhanced Halo UI setup completed");
 }
 #endif
 

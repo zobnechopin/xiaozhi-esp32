@@ -8,12 +8,6 @@
 #include "config.h"
 #include "mcp_server.h"
 #include "lamp_controller.h"
-// #include "test_image.h"  // 新增：包含测试图片头文件
-// #include "test_gif.h"  // 新增：包含测试GIF头文件
-// #include "cat_idle.h"
-// #include "cat_surprise.h"
-// #include "facetest.h"  // 添加这行
- 
 #include "led/single_led.h"
 #include "esp32_camera.h"
 #include <wifi_station.h>
@@ -28,6 +22,9 @@
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
 #include "esp_lcd_gc9a01.h"
+#include "acorn_display.h"
+#include "acorn_display_controller.h"
+#include "acorn_assets.h"
 
 
 // #if defined(LCD_TYPE_GC9A01_SERIAL)
@@ -82,6 +79,8 @@ private:
     PowerManager* power_manager_;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
     esp_lcd_panel_handle_t panel_ = nullptr;
+    AcornDisplay* acorn_display_;
+    AcornDisplayController* display_controller_;
     void InitializeSpi() {
         spi_bus_config_t buscfg = {};
         buscfg.mosi_io_num = DISPLAY_MOSI_PIN;
@@ -161,19 +160,17 @@ private:
     }
     
     void InitializeLcdDisplay() {
-        esp_lcd_panel_io_handle_t panel_io = nullptr;
-        esp_lcd_panel_handle_t panel = nullptr;
         // 液晶屏控制IO初始化
         ESP_LOGD(TAG, "Install panel IO");
         esp_lcd_panel_io_spi_config_t io_config = {};
         io_config.cs_gpio_num = DISPLAY_CS_PIN;
         io_config.dc_gpio_num = DISPLAY_DC_PIN;
-        io_config.spi_mode = DISPLAY_SPI_MODE;  // 使用配置文件中的定义，而不是硬编码为3
+        io_config.spi_mode = DISPLAY_SPI_MODE;
         io_config.pclk_hz = 40 * 1000 * 1000;
         io_config.trans_queue_depth = 10;
         io_config.lcd_cmd_bits = 8;
         io_config.lcd_param_bits = 8;
-        ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(SPI3_HOST, &io_config, &panel_io));
+        ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(SPI3_HOST, &io_config, &panel_io_));  // 赋值给成员变量
 
         // 初始化液晶屏驱动芯片
         ESP_LOGD(TAG, "Install LCD driver");
@@ -182,25 +179,27 @@ private:
         panel_config.rgb_ele_order = DISPLAY_RGB_ORDER;
         panel_config.bits_per_pixel = 16;
 #if defined(LCD_TYPE_ILI9341_SERIAL)
-        ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(panel_io, &panel_config, &panel));
+        ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(panel_io_, &panel_config, &panel_));  // 赋值给成员变量
 #elif defined(LCD_TYPE_GC9A01_SERIAL)
-
-        ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(panel_io, &panel_config, &panel));
+        ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(panel_io_, &panel_config, &panel_));   // 赋值给成员变量
 #else
-        ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
+        ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io_, &panel_config, &panel_));   // 赋值给成员变量
 #endif
         
-        esp_lcd_panel_reset(panel);
-        esp_lcd_panel_init(panel);
-        esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
-        esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
-        esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-        esp_lcd_panel_disp_on_off(panel, true);  // 确保显示开启
+        esp_lcd_panel_reset(panel_);
+        esp_lcd_panel_init(panel_);
+        esp_lcd_panel_invert_color(panel_, DISPLAY_INVERT_COLOR);
+        esp_lcd_panel_swap_xy(panel_, DISPLAY_SWAP_XY);
+        esp_lcd_panel_mirror(panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+        esp_lcd_panel_disp_on_off(panel_, true);
         
-        // 先创建 display_ 对象（使用简单的方式，不设置自定义样式）
-        display_ = new SpiLcdDisplay(panel_io, panel,
-                                    DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
-                                    DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
+        // 恢复使用 AcornDisplay
+        acorn_display_ = new AcornDisplay(panel_io_, panel_,
+                                DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
+                                DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
+        
+        display_controller_ = new AcornDisplayController(acorn_display_);
+        display_ = acorn_display_;  // 保持兼容性
         
         // 创建后设置自定义样式
         if (display_) {
@@ -217,19 +216,6 @@ private:
             };
             display_->UpdateStyle(custom_style);
         }
-
-        // 完全注释掉全屏测试图片
-        // if (display_) {
-        //     init_test_fullscreen_image();  // 初始化图片数据（正确的函数名）
-        //     display_->ShowFullscreenImage(&test_fullscreen_image);  // 显示全屏图片
-        //     ESP_LOGI(TAG, "Fullscreen test image displayed");
-        // }
-
-        // 完全注释掉GIF动画测试
-        // if (display_) {
-        //     ESP_LOGI(TAG, "Testing facetest small GIF animation (176x120)");
-        //     display_->ShowGifAnimation(&facetest);
-        // }
     }
 
 
@@ -261,15 +247,22 @@ public:
     AcornESP32S3Full() :
         boot_button_(BOOT_BUTTON_GPIO) {
         InitializeSpi();
-        InitializeLcdDisplay();
+        InitializeLcdDisplay();  // 这里会创建 AcornDisplay
         InitializeButtons();
         InitializePowerManager();
         InitializePowerSaveTimer();
         InitializeIot();
         InitializeCamera();
-        // 在构造函数最后简单调用
+        
+        // 设置背光
         if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {
             GetBacklight()->SetBrightness(100);
+        }
+        
+        // 设置初始显示状态为 IDLE
+        if (display_controller_) {
+            display_controller_->ForceIdle();
+            ESP_LOGI(TAG, "Display controller initialized with IDLE state");
         }
     }
 
@@ -324,6 +317,11 @@ public:
             power_save_timer_->WakeUp();
         }
         WifiBoard::SetPowerSaveMode(enabled);
+    }
+
+    // 新增：获取显示控制器的接口
+    AcornDisplayController* GetDisplayController() {
+        return display_controller_;
     }
 };
 

@@ -514,10 +514,27 @@ elseif(CONFIG_BOARD_TYPE_SURFER_C3_1_14TFT)
     set(DEFAULT_ASSETS ${ASSETS_XIAOZHI_S_PUHUI_COMMON_20_4_EMOJI_32})
 endif()
 
-file(GLOB BOARD_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.c
-)
+# 修改这部分代码，添加调试信息
+if(BOARD_TYPE STREQUAL "acorn-esp32s3-full")
+    message(STATUS "=== Processing acorn-esp32s3-full board ===")
+    # 特殊处理 acorn-esp32s3-full，递归搜索子目录
+    file(GLOB_RECURSE BOARD_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/gifs/*.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/icons/*.c
+    )
+    message(STATUS "Found board sources:")
+    foreach(SOURCE_FILE ${BOARD_SOURCES})
+        message(STATUS "  ${SOURCE_FILE}")
+    endforeach()
+else()
+    # 其他板子保持原有逻辑
+    file(GLOB BOARD_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD_TYPE}/*.c
+    )
+endif()
 list(APPEND SOURCES ${BOARD_SOURCES})
 
 # Select audio processor according to Kconfig
