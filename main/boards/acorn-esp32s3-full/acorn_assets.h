@@ -21,6 +21,10 @@ extern const lv_image_dsc_t volume_mute;
 extern const lv_image_dsc_t battery_low;
 extern const lv_image_dsc_t battery_full;
 
+// 在 GIF 资源部分添加
+extern const lv_image_dsc_t facetest;
+extern const lv_image_dsc_t idle_1;
+
 namespace AcornAssets {
     const lv_image_dsc_t* GetGif(const char* name);
     const lv_image_dsc_t* GetStatusIcon(const char* name);

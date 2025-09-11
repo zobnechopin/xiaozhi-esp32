@@ -369,8 +369,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_SWITCH_OF
 };
 
 const lv_image_dsc_t switch_off = {
-    .header.cf = LV_COLOR_FORMAT_RGB565,
-    .header.magic = LV_IMAGE_HEADER_MAGIC,
+    .header.cf = LV_IMAGE_HEADER_MAGIC,
     .header.w = 176,
     .header.h = 120,
     .data_size = 4464,

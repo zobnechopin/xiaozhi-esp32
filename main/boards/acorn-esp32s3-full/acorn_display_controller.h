@@ -1,38 +1,32 @@
 #pragma once
-#include "acorn_display.h"  // 恢复使用 acorn_display.h
+#include "../../display/lcd_display.h"
 #include <esp_timer.h>
 #include <map>
 #include <vector>
 #include <string>
+#include <functional>
 
 // 设备状态枚举
 enum class DeviceDisplayState {
-    IDLE,           // 空闲状态
-    LISTENING,      // 监听状态
-    THINKING,       // 思考状态
-    SPEAKING,       // 说话状态
-    VOLUME_UP,      // 音量调高
-    VOLUME_DOWN,    // 音量调低
-    WIFI_CONNECTING,// WiFi连接中
-    WIFI_CONNECTED, // WiFi已连接
-    BATTERY_LOW,    // 电量低
-    ERROR,          // 错误状态
+    IDLE, LISTENING, THINKING, SPEAKING, 
+    VOLUME_UP, VOLUME_DOWN, WIFI_CONNECTING, 
+    WIFI_CONNECTED, BATTERY_LOW, ERROR
 };
 
-// 显示配置结构
+// 简化的显示配置
 struct DisplayConfig {
-    std::vector<const char*> gif_names;  // GIF名称数组
-    const char* status_icon;             // 状态图标
-    const char* bottom_content;          // 底部内容
+    std::vector<const char*> gif_names;  // 支持多个 GIF 随机选择
+    const char* status_icon;             // 上方状态栏图标
+    const char* bottom_content;          // 底部图标内容
     const char* bottom_text;             // 底部文字
-    bool auto_return_to_idle;            // 是否自动返回IDLE
-    int timeout_ms;                      // 超时时间（毫秒）
-    bool random_gif;                     // 是否随机选择GIF
+    bool auto_return_to_idle;
+    int timeout_ms;
+    bool random_gif;                     // 是否随机选择 GIF
 };
 
 class AcornDisplayController {
 public:
-    AcornDisplayController(AcornDisplay* display);  // 恢复使用 AcornDisplay*
+    AcornDisplayController(SpiLcdDisplay* display);
     ~AcornDisplayController();
     
     // 主要接口：设置设备状态
@@ -80,7 +74,8 @@ public:
 private:
     void ApplyDisplayConfig(const DisplayConfig& config);
     void SetupStateMapping();
-    void UpdateDisplay();  // 统一更新显示，考虑覆盖优先级
+    // 撤回 UpdateDisplay() 中的过渡效果
+    void UpdateDisplay();
     
     // 辅助方法声明
     std::string GetCurrentGif(const DisplayConfig& config);
@@ -98,7 +93,7 @@ private:
     static void TimeoutCallback(void* arg);
     static void OverlayTimeoutCallback(void* arg);
     
-    AcornDisplay* display_;  // 恢复使用 AcornDisplay*
+    SpiLcdDisplay* display_;  // 改为 SpiLcdDisplay*
     DeviceDisplayState current_state_;
     DeviceDisplayState previous_state_;
     esp_timer_handle_t timeout_timer_;
@@ -113,4 +108,12 @@ private:
     std::string current_gif_override_;          // 当前GIF覆盖
     std::string current_bottom_text_override_;  // 当前底部文字覆盖
     std::string current_bottom_icon_override_;  // 当前底部图标覆盖
+
+private:
+    // 删除这些过渡相关的成员和方法
+    // std::function<void()> fade_out_callback_;
+    // void SetGifWithFadeTransition(const lv_image_dsc_t* gif, const char* gif_name);
+    // void OnFadeOutComplete();
+    
+    // ... 保留其他现有成员 ...
 };

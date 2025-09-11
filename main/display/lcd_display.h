@@ -79,6 +79,8 @@ public:
     // Add theme switching function
     virtual void SetTheme(const std::string& theme_name) override;
 
+    // 新增：用于切换 GIF 的方法
+    virtual void SetCustomGif(const lv_image_dsc_t* gif_src);
 };
 
 // SPI LCD显示器
@@ -87,6 +89,9 @@ public:
     SpiLcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel,
                   int width, int height, int offset_x, int offset_y,
                   bool mirror_x, bool mirror_y, bool swap_xy);
+    
+    // 新增：获取 GIF 控件的方法
+    lv_obj_t* GetGifWidget();
 };
 
 // RGB LCD显示器

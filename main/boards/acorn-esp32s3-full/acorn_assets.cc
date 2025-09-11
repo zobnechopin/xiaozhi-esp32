@@ -10,17 +10,16 @@ const lv_image_dsc_t* GetGif(const char* name) {
     static std::map<std::string, const lv_image_dsc_t*> gif_map;
     
     if (gif_map.empty()) {
-        // 初始化映射表 - 使用实际的文件变量名作为键
-        gif_map["idle_status_1"] = &idle_status_1;
-        gif_map["idle_status_2"] = &idle_status_2;
-        gif_map["idle_status_blink"] = &idle_status_blink;
-        gif_map["listen_start"] = &listen_start;
-        gif_map["listen_end"] = &listen_end;
-        gif_map["talk_loop"] = &talk_loop;
-        gif_map["talk_start"] = &talk_start;
+        // 只包含已修复且能正常播放的 GIF
+        gif_map["idle_1"] = &idle_1;
         gif_map["sleep_loop"] = &sleep_loop;
-        gif_map["switch_on"] = &switch_on;
-        gif_map["switch_off"] = &switch_off;
+        gif_map["facetest"] = &facetest;
+        
+        // 待修复的 GIF（暂时注释）
+        // gif_map["idle_status_2"] = &idle_status_2;
+        // gif_map["listen_start"] = &listen_start;
+        // gif_map["talk_loop"] = &talk_loop;
+        // ... 其他待修复的
     }
     
     auto it = gif_map.find(name);

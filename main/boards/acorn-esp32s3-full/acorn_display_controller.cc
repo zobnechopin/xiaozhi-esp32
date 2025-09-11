@@ -3,10 +3,11 @@
 #include <esp_log.h>
 #include <random>
 #include <cstring>
+#include <functional>
 
 #define TAG "AcornDisplayController"
 
-AcornDisplayController::AcornDisplayController(AcornDisplay* display)
+AcornDisplayController::AcornDisplayController(SpiLcdDisplay* display)
     : display_(display), current_state_(DeviceDisplayState::IDLE), 
       previous_state_(DeviceDisplayState::IDLE), timeout_timer_(nullptr), 
       overlay_timer_(nullptr) {
@@ -42,117 +43,113 @@ AcornDisplayController::~AcornDisplayController() {
 
 void AcornDisplayController::SetupStateMapping() {
     // 状态到显示配置的映射
-    state_configs_ = {
-        {DeviceDisplayState::IDLE, {
-            .gif_names = {"idle_status_1", "idle_status_2", "idle_status_blink"},
-            .status_icon = nullptr,
-            .bottom_content = nullptr,
-            .bottom_text = nullptr,
-            .auto_return_to_idle = false,
-            .timeout_ms = 0,
-            .random_gif = true  // 启用随机选择
-        }},
-        
-        {DeviceDisplayState::LISTENING, {
-            .gif_names = {"listen_start"},
-            .status_icon = "microphone_active",
-            .bottom_content = nullptr,
-            .bottom_text = "正在聆听...",
-            .auto_return_to_idle = false,
-            .timeout_ms = 0,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::THINKING, {
-            .gif_names = {"listen_end"},
-            .status_icon = "brain_active",
-            .bottom_content = nullptr,
-            .bottom_text = "思考中...",
-            .auto_return_to_idle = true,
-            .timeout_ms = 10000,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::SPEAKING, {
-            .gif_names = {"talk_loop"},
-            .status_icon = "speaker_active",
-            .bottom_content = nullptr,
-            .bottom_text = nullptr,
-            .auto_return_to_idle = false,
-            .timeout_ms = 0,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::VOLUME_UP, {
-            .gif_names = {"volume_up_animation"},
-            .status_icon = "volume_high",
-            .bottom_content = nullptr,
-            .bottom_text = "音量+",
-            .auto_return_to_idle = true,
-            .timeout_ms = 2000,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::VOLUME_DOWN, {
-            .gif_names = {"volume_down_animation"},
-            .status_icon = "volume_low",
-            .bottom_content = nullptr,
-            .bottom_text = "音量-",
-            .auto_return_to_idle = true,
-            .timeout_ms = 2000,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::WIFI_CONNECTING, {
-            .gif_names = {"wifi_connecting_animation"},
-            .status_icon = "wifi_disconnected",
-            .bottom_content = nullptr,
-            .bottom_text = "连接中...",
-            .auto_return_to_idle = false,
-            .timeout_ms = 0,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::WIFI_CONNECTED, {
-            .gif_names = {"notification_gif"},
-            .status_icon = "wifi_connected",
-            .bottom_content = nullptr,
-            .bottom_text = "已连接",
-            .auto_return_to_idle = true,
-            .timeout_ms = 3000,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::BATTERY_LOW, {
-            .gif_names = {"error_animation"},
-            .status_icon = "battery_low",
-            .bottom_content = nullptr,
-            .bottom_text = "电量不足",
-            .auto_return_to_idle = true,
-            .timeout_ms = 5000,
-            .random_gif = false
-        }},
-        
-        {DeviceDisplayState::ERROR, {
-            .gif_names = {"error_animation"},
-            .status_icon = "info_icon",
-            .bottom_content = nullptr,
-            .bottom_text = "系统错误",
-            .auto_return_to_idle = true,
-            .timeout_ms = 5000,
-            .random_gif = false
-        }},
+    state_configs_[DeviceDisplayState::IDLE] = {
+        .gif_names = {"idle_1", "sleep_loop"},
+        .status_icon = nullptr,
+        .bottom_content = nullptr,
+        .bottom_text = nullptr,
+        .auto_return_to_idle = true,
+        .timeout_ms = 3000,  // 3 秒后重新随机选择
+        .random_gif = true
+    };
+    
+    state_configs_[DeviceDisplayState::LISTENING] = {
+        .gif_names = {"listen_start"},
+        .status_icon = "microphone_active",
+        .bottom_content = nullptr,
+        .bottom_text = "正在聆听...",
+        .auto_return_to_idle = false,
+        .timeout_ms = 0,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::THINKING] = {
+        .gif_names = {"listen_end"},
+        .status_icon = "brain_active",
+        .bottom_content = nullptr,
+        .bottom_text = "思考中...",
+        .auto_return_to_idle = true,
+        .timeout_ms = 10000,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::SPEAKING] = {
+        .gif_names = {"talk_loop"},
+        .status_icon = "speaker_active",
+        .bottom_content = nullptr,
+        .bottom_text = nullptr,
+        .auto_return_to_idle = false,
+        .timeout_ms = 0,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::VOLUME_UP] = {
+        .gif_names = {"volume_up_animation"},
+        .status_icon = "volume_high",
+        .bottom_content = nullptr,
+        .bottom_text = "音量+",
+        .auto_return_to_idle = true,
+        .timeout_ms = 2000,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::VOLUME_DOWN] = {
+        .gif_names = {"volume_down_animation"},
+        .status_icon = "volume_low",
+        .bottom_content = nullptr,
+        .bottom_text = "音量-",
+        .auto_return_to_idle = true,
+        .timeout_ms = 2000,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::WIFI_CONNECTING] = {
+        .gif_names = {"wifi_connecting_animation"},
+        .status_icon = "wifi_disconnected",
+        .bottom_content = nullptr,
+        .bottom_text = "连接中...",
+        .auto_return_to_idle = false,
+        .timeout_ms = 0,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::WIFI_CONNECTED] = {
+        .gif_names = {"notification_gif"},
+        .status_icon = "wifi_connected",
+        .bottom_content = nullptr,
+        .bottom_text = "已连接",
+        .auto_return_to_idle = true,
+        .timeout_ms = 3000,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::BATTERY_LOW] = {
+        .gif_names = {"error_animation"},
+        .status_icon = "battery_low",
+        .bottom_content = nullptr,
+        .bottom_text = "电量不足",
+        .auto_return_to_idle = true,
+        .timeout_ms = 5000,
+        .random_gif = false
+    };
+    
+    state_configs_[DeviceDisplayState::ERROR] = {
+        .gif_names = {"error_animation"},
+        .status_icon = "info_icon",
+        .bottom_content = nullptr,
+        .bottom_text = "系统错误",
+        .auto_return_to_idle = true,
+        .timeout_ms = 5000,
+        .random_gif = false
     };
     
     // 表情名称到状态的映射（兼容原有接口）
-    emotion_mapping_ = {
-        {"neutral", DeviceDisplayState::IDLE},
-        {"happy", DeviceDisplayState::IDLE},
-        {"listening", DeviceDisplayState::LISTENING},
-        {"thinking", DeviceDisplayState::THINKING},
-        {"speaking", DeviceDisplayState::SPEAKING},
-        {"sleepy", DeviceDisplayState::IDLE},
-    };
+    emotion_mapping_["neutral"] = DeviceDisplayState::IDLE;
+    emotion_mapping_["happy"] = DeviceDisplayState::IDLE;
+    emotion_mapping_["listening"] = DeviceDisplayState::LISTENING;
+    emotion_mapping_["thinking"] = DeviceDisplayState::THINKING;
+    emotion_mapping_["speaking"] = DeviceDisplayState::SPEAKING;
+    emotion_mapping_["sleepy"] = DeviceDisplayState::IDLE;
 }
 
 void AcornDisplayController::SetDeviceState(DeviceDisplayState state) {
@@ -222,12 +219,48 @@ void AcornDisplayController::ShowTemporary(const char* gif_name, const char* sta
 }
 
 void AcornDisplayController::ForceIdle() {
-    SetDeviceState(DeviceDisplayState::IDLE);
+    ESP_LOGI(TAG, "ForceIdle called, current state: %d", (int)current_state_);
+    
+    // 强制刷新 IDLE 状态，即使当前已经是 IDLE
+    if (current_state_ == DeviceDisplayState::IDLE) {
+        // 直接更新显示和启动定时器
+        UpdateDisplay();
+        
+        // 手动启动 IDLE 循环定时器
+        auto it = state_configs_.find(DeviceDisplayState::IDLE);
+        if (it != state_configs_.end() && it->second.auto_return_to_idle && it->second.timeout_ms > 0) {
+            ESP_LOGI(TAG, "Starting IDLE timer for %d ms", it->second.timeout_ms);
+            esp_timer_stop(timeout_timer_);  // 先停止之前的定时器
+            esp_timer_start_once(timeout_timer_, it->second.timeout_ms * 1000);
+        }
+    } else {
+        // 如果不是 IDLE 状态，使用正常的状态切换
+        SetDeviceState(DeviceDisplayState::IDLE);
+    }
 }
 
 void AcornDisplayController::TimeoutCallback(void* arg) {
     auto* controller = static_cast<AcornDisplayController*>(arg);
-    controller->SetDeviceState(DeviceDisplayState::IDLE);
+    ESP_LOGI(TAG, "TimeoutCallback triggered, current_state: %d", (int)controller->current_state_);
+    
+    if (controller->current_state_ == DeviceDisplayState::IDLE) {
+        // 如果当前已经是 IDLE 状态，直接刷新显示（重新随机选择）
+        ESP_LOGI(TAG, "IDLE timeout, refreshing GIF");
+        controller->UpdateDisplay();
+        
+        // 重新启动定时器
+        auto it = controller->state_configs_.find(DeviceDisplayState::IDLE);
+        if (it != controller->state_configs_.end() && it->second.auto_return_to_idle) {
+            ESP_LOGI(TAG, "Restarting IDLE timer for %d ms", it->second.timeout_ms);
+            esp_timer_start_once(controller->timeout_timer_, it->second.timeout_ms * 1000);
+        } else {
+            ESP_LOGE(TAG, "Failed to restart timer - config not found or auto_return_to_idle is false");
+        }
+    } else {
+        // 其他状态正常返回 IDLE
+        ESP_LOGI(TAG, "Returning to IDLE from state: %d", (int)controller->current_state_);
+        controller->SetDeviceState(DeviceDisplayState::IDLE);
+    }
 }
 
 // === 独立区域控制方法实现 ===
@@ -364,6 +397,7 @@ void AcornDisplayController::SetCustomDisplay(const char* gif_name,
 
 // === 统一更新显示方法 ===
 
+// 把 UpdateDisplay() 实现移回这里
 void AcornDisplayController::UpdateDisplay() {
     if (!display_) return;
     
@@ -378,28 +412,73 @@ void AcornDisplayController::UpdateDisplay() {
     
     const DisplayConfig& config = it->second;
     
-    // 更新中央 GIF
+    // 更新中央 GIF - 直接切换，无过渡效果
     std::string gif_name = GetCurrentGif(config);
     if (!gif_name.empty()) {
         const lv_image_dsc_t* gif = AcornAssets::GetGif(gif_name.c_str());
         if (gif) {
-            display_->SetCenterGif(gif_name.c_str());  // 使用 AcornDisplay 的方法
+            display_->SetCustomGif(gif);  // 直接设置，不用过渡
             ESP_LOGI(TAG, "Set center GIF: %s", gif_name.c_str());
         }
     }
     
-    // 更新状态图标
-    std::string status_icon = GetCurrentStatusIcon(config);
-    if (!status_icon.empty()) {
-        display_->SetStatusIcon(status_icon.c_str());  // 使用 AcornDisplay 的方法
-    }
-    
-    // 更新底部内容
-    std::string bottom_text = GetCurrentBottomText(config);
-    if (!bottom_text.empty()) {
-        display_->SetBottomText(bottom_text.c_str());  // 使用 AcornDisplay 的方法
-    }
+    // TODO: 状态图标和底部内容需要等 SpiLcdDisplay 添加相应方法
 }
+
+// 新增方法：带淡入淡出效果的 GIF 切换
+// void AcornDisplayController::SetGifWithFadeTransition(const lv_image_dsc_t* gif, const char* gif_name) {
+//     // 创建回调函数，捕获参数
+//     fade_out_callback_ = [this, gif, gif_name]() {
+//         // 切换 GIF
+//         display_->SetCustomGif(gif);
+//         ESP_LOGI(TAG, "Set center GIF: %s", gif_name);
+        
+//         // 获取 GIF 控件并创建淡入动画
+//         lv_obj_t* gif_obj = display_->GetGifWidget();
+//         if (gif_obj) {
+//             lv_anim_t fade_in;
+//             lv_anim_init(&fade_in);
+//             lv_anim_set_var(&fade_in, gif_obj);
+//             lv_anim_set_values(&fade_in, LV_OPA_TRANSP, LV_OPA_COVER);
+//             lv_anim_set_time(&fade_in, 200);  // 200ms 淡入
+//             lv_anim_set_path_cb(&fade_in, lv_anim_path_ease_in_out);
+//             lv_anim_set_exec_cb(&fade_in, (lv_anim_exec_xcb_t)lv_obj_set_style_opa);
+//             lv_anim_start(&fade_in);
+//         }
+//     };
+    
+//     lv_obj_t* gif_obj = display_->GetGifWidget();
+    
+//     if (gif_obj) {
+//         // 创建淡出动画
+//         lv_anim_t fade_out;
+//         lv_anim_init(&fade_out);
+//         lv_anim_set_var(&fade_out, gif_obj);
+//         lv_anim_set_values(&fade_out, lv_obj_get_style_opa(gif_obj, 0), LV_OPA_TRANSP);
+//         lv_anim_set_time(&fade_out, 200);  // 200ms 淡出
+//         lv_anim_set_path_cb(&fade_out, lv_anim_path_ease_in_out);
+//         lv_anim_set_exec_cb(&fade_out, (lv_anim_exec_xcb_t)lv_obj_set_style_opa);
+//         lv_anim_set_ready_cb(&fade_out, [](lv_anim_t* a) {
+//             // 淡出完成后调用存储的回调
+//             auto* controller = static_cast<AcornDisplayController*>(a->user_data);
+//             controller->OnFadeOutComplete();
+//         });
+//         lv_anim_set_user_data(&fade_out, this);
+//         lv_anim_start(&fade_out);
+//     } else {
+//         // 如果无法获取控件，直接切换
+//         display_->SetCustomGif(gif);
+//         ESP_LOGI(TAG, "Set center GIF: %s", gif_name);
+//     }
+// }
+
+// void AcornDisplayController::OnFadeOutComplete() {
+//     // 执行存储的回调
+//     if (fade_out_callback_) {
+//         fade_out_callback_();
+//         fade_out_callback_ = nullptr;  // 清除回调
+//     }
+// }
 
 // === 新的定时器回调 ===
 
@@ -430,16 +509,30 @@ std::string AcornDisplayController::GetCurrentGif(const DisplayConfig& config) {
     }
     
     if (config.random_gif && config.gif_names.size() > 1) {
-        // 随机选择一个 GIF
+        // 避免连续选择相同的 GIF
         static std::random_device rd;
         static std::mt19937 gen(rd());
+        static std::string last_gif_name = "";  // 记录上次选择的 GIF
+        
         std::uniform_int_distribution<> dis(0, config.gif_names.size() - 1);
         int index = dis(gen);
-        return std::string(config.gif_names[index]);
-    } else {
-        // 使用第一个 GIF
-        return std::string(config.gif_names[0]);
+        std::string selected_gif = std::string(config.gif_names[index]);
+        
+        // 如果选中的 GIF 和上次相同，强制选择另一个
+        if (selected_gif == last_gif_name && config.gif_names.size() > 1) {
+            index = (index + 1) % config.gif_names.size();  // 选择下一个
+            selected_gif = std::string(config.gif_names[index]);
+        }
+        
+        last_gif_name = selected_gif;
+        ESP_LOGI(TAG, "Random GIF selected: %s (index: %d, total: %d)", 
+                 selected_gif.c_str(), index, config.gif_names.size());
+        return selected_gif;
     }
+    
+    // 使用第一个 GIF
+    ESP_LOGI(TAG, "Using first GIF: %s", config.gif_names[0]);
+    return std::string(config.gif_names[0]);
 }
 
 std::string AcornDisplayController::GetCurrentStatusIcon(const DisplayConfig& config) {

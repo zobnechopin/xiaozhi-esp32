@@ -193,29 +193,20 @@ private:
         esp_lcd_panel_mirror(panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
         esp_lcd_panel_disp_on_off(panel_, true);
         
-        // 恢复使用 AcornDisplay
-        acorn_display_ = new AcornDisplay(panel_io_, panel_,
-                                DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
-                                DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
-        
-        display_controller_ = new AcornDisplayController(acorn_display_);
-        display_ = acorn_display_;  // 保持兼容性
+        // 直接使用 SpiLcdDisplay，它会自动调用 HaloUI
+        display_ = new SpiLcdDisplay(panel_io_, panel_, 240, 240, 0, 0, false, false, false);
         
         // 创建后设置自定义样式
-        if (display_) {
-            EmojiCollection* emoji_collection;
-#if CONFIG_USE_WECHAT_MESSAGE_STYLE
-            emoji_collection = new Twemoji32();
-#else
-            emoji_collection = DISPLAY_HEIGHT >= 240 ? static_cast<EmojiCollection*>(new Twemoji64()) : static_cast<EmojiCollection*>(new Twemoji32());
-#endif
-            DisplayStyle custom_style = {
-                .text_font = &font_puhui_16_4,
-                .icon_font = &font_awesome_16_4,
-                .emoji_collection = emoji_collection,
-            };
-            display_->UpdateStyle(custom_style);
-        }
+        EmojiCollection* emoji_collection = DISPLAY_HEIGHT >= 240 ? 
+            static_cast<EmojiCollection*>(new Twemoji64()) : 
+            static_cast<EmojiCollection*>(new Twemoji32());
+        
+        DisplayStyle custom_style = {
+            .text_font = &font_puhui_16_4,
+            .icon_font = &font_awesome_16_4,
+            .emoji_collection = emoji_collection,
+        };
+        display_->UpdateStyle(custom_style);
     }
 
 
@@ -244,10 +235,9 @@ private:
     }
 
 public:
-    AcornESP32S3Full() :
-        boot_button_(BOOT_BUTTON_GPIO) {
+    AcornESP32S3Full() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeSpi();
-        InitializeLcdDisplay();  // 这里会创建 AcornDisplay
+        InitializeLcdDisplay();  // 这里创建 SpiLcdDisplay + HaloUI
         InitializeButtons();
         InitializePowerManager();
         InitializePowerSaveTimer();
@@ -259,11 +249,9 @@ public:
             GetBacklight()->SetBrightness(100);
         }
         
-        // 设置初始显示状态为 IDLE
-        if (display_controller_) {
-            display_controller_->ForceIdle();
-            ESP_LOGI(TAG, "Display controller initialized with IDLE state");
-        }
+        // 使用 HaloUI + 我们的控制器
+        display_controller_ = new AcornDisplayController(static_cast<SpiLcdDisplay*>(display_));
+        display_controller_->ForceIdle();
     }
 
     virtual Led* GetLed() override {

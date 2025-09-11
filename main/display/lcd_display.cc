@@ -13,7 +13,12 @@
 
 #include "board.h"
 #ifdef CONFIG_ENABLE_HALO_UI
-#include "boards/acorn-esp32s3-full/acorn_assets.h"  // 使用我们的资源
+#include "boards/acorn-esp32s3-full/facetest.h"  // 使用已验证的 facetest
+#include "boards/acorn-esp32s3-full/idle_1.h"  // 添加新的头文件
+#include "boards/acorn-esp32s3-full/gifs/sleep_loop.h"  // 添加 sleep_loop 头文件
+
+// 直接声明 battery_low，避免包含问题
+extern const lv_image_dsc_t battery_low;
 #endif
 
 #define TAG "LcdDisplay"
@@ -1114,115 +1119,57 @@ void LcdDisplay::SetupHaloUI() {
     auto screen = lv_screen_active();
     lv_obj_set_style_text_font(screen, style_.text_font, 0);
     lv_obj_set_style_text_color(screen, lv_color_white(), 0);
-    lv_obj_set_style_bg_color(screen, lv_color_black(), 0);  // Halo UI 黑色背景
+    lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
 
-    // 创建 Halo GIF 背景 - 使用我们的资源
-    ESP_LOGI(TAG, "Creating Enhanced Halo UI with custom GIF background");
+    ESP_LOGI(TAG, "Creating test layout with battery icon and GIF");
+    
+    // 创建顶部的电池图标测试
+    lv_obj_t* battery_icon = lv_img_create(screen);
+    if (battery_icon) {
+        ESP_LOGI(TAG, "Battery icon widget created");
+        lv_img_set_src(battery_icon, &battery_low);  // 使用 battery_low 图标
+        lv_obj_align(battery_icon, LV_ALIGN_TOP_MID, 0, 10);  // 顶部居中，向下10像素
+        lv_obj_clear_flag(battery_icon, LV_OBJ_FLAG_HIDDEN);
+        ESP_LOGI(TAG, "Battery low icon should be visible at top");
+    } else {
+        ESP_LOGE(TAG, "Failed to create battery icon widget");
+    }
+    
+    // 创建中央的 GIF
     gif_widget_ = lv_gif_create(screen);
     if (gif_widget_) {
-        // 使用我们的 idle_status_1 替代 facetest
-        const lv_image_dsc_t* idle_gif = AcornAssets::GetGif("idle_status_1");
-        if (idle_gif) {
-            lv_gif_set_src(gif_widget_, idle_gif);
-            lv_obj_set_size(gif_widget_, 176, 120);
-            
-            // 计算居中位置
-            int gif_x = (LV_HOR_RES - 176) / 2;
-            int gif_y = 40;  // 状态栏下方
-            lv_obj_set_pos(gif_widget_, gif_x, gif_y);
-            
-            ESP_LOGI(TAG, "Custom GIF background loaded at (%d, %d)", gif_x, gif_y);
-        } else {
-            ESP_LOGE(TAG, "Failed to load idle_status_1 GIF");
-        }
+        ESP_LOGI(TAG, "GIF widget created successfully");
+        
+        lv_obj_set_size(gif_widget_, 176, 120);
+        lv_obj_align(gif_widget_, LV_ALIGN_CENTER, 0, 20);  // 中央，向下偏移20像素给电池图标留空间
+        
+        // 测试 sleep_loop GIF
+        ESP_LOGI(TAG, "Loading sleep_loop GIF...");
+        ESP_LOGI(TAG, "sleep_loop data_size: %u", (unsigned int)sleep_loop.data_size);
+        ESP_LOGI(TAG, "sleep_loop header.cf: 0x%x", (unsigned int)sleep_loop.header.cf);
+        lv_gif_set_src(gif_widget_, &sleep_loop);
+        
+        lv_obj_clear_flag(gif_widget_, LV_OBJ_FLAG_HIDDEN);
+        ESP_LOGI(TAG, "sleep_loop GIF should be visible in center");
+    } else {
+        ESP_LOGE(TAG, "Failed to create GIF widget!");
     }
-
-    /* Container - 透明容器 */
-    container_ = lv_obj_create(screen);
-    lv_obj_set_size(container_, LV_HOR_RES, LV_VER_RES);
-    lv_obj_set_flex_flow(container_, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(container_, 0, 0);
-    lv_obj_set_style_border_width(container_, 0, 0);
-    lv_obj_set_style_pad_row(container_, 0, 0);
-    lv_obj_set_style_bg_opa(container_, LV_OPA_TRANSP, 0);  // 透明
-    lv_obj_set_style_border_color(container_, current_theme_.border, 0);
-
-    /* Halo Status bar - 透明状态栏 */
-    status_bar_ = lv_obj_create(container_);
-    lv_obj_set_size(status_bar_, LV_HOR_RES, style_.text_font->line_height);
-    lv_obj_set_style_radius(status_bar_, 0, 0);
-    lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);  // 透明
-    lv_obj_set_style_text_color(status_bar_, lv_color_white(), 0);  // 白色文字
-
-    /* Halo Status bar elements */
-    lv_obj_set_flex_flow(status_bar_, LV_FLEX_FLOW_ROW);
-    lv_obj_set_style_pad_all(status_bar_, 0, 0);
-    lv_obj_set_style_border_width(status_bar_, 0, 0);
-    lv_obj_set_style_pad_column(status_bar_, 0, 0);
-    lv_obj_set_style_pad_left(status_bar_, 2, 0);
-    lv_obj_set_style_pad_right(status_bar_, 2, 0);
-    lv_obj_set_flex_align(status_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    // 左侧：网络状态（保持原有功能）
-    network_label_ = lv_label_create(status_bar_);
-    lv_label_set_text(network_label_, "");
-    lv_obj_set_style_text_font(network_label_, style_.icon_font, 0);
-    lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
-
-    // 中间：通知和状态文字
-    notification_label_ = lv_label_create(status_bar_);
-    lv_obj_set_flex_grow(notification_label_, 1);
-    lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
-    lv_label_set_text(notification_label_, "");
-    lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
-
-    status_label_ = lv_label_create(status_bar_);
-    lv_obj_set_flex_grow(status_label_, 1);
-    lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
-    lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
-
-    // 右侧：音量图标（使用我们的图标）
-    mute_label_ = lv_img_create(status_bar_);  // 改为 lv_img_create
-    lv_obj_add_flag(mute_label_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
-
-    // 右侧：电池图标（使用我们的图标）
-    battery_label_ = lv_img_create(status_bar_);  // 改为 lv_img_create
-    lv_obj_add_flag(battery_label_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
-
-    // 底部容器（新增）
-    bottom_container_ = lv_obj_create(screen);
-    lv_obj_set_size(bottom_container_, LV_HOR_RES, 30);
-    lv_obj_align(bottom_container_, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_opa(bottom_container_, LV_OPA_TRANSP, 0);
-    lv_obj_add_flag(bottom_container_, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
-
-    bottom_icon_ = lv_img_create(bottom_container_);
-    lv_obj_center(bottom_icon_);
-    lv_obj_add_flag(bottom_icon_, LV_OBJ_FLAG_HIDDEN);
-
-    bottom_label_ = lv_label_create(bottom_container_);
-    lv_obj_center(bottom_label_);
-    lv_obj_set_style_text_color(bottom_label_, lv_color_white(), 0);
-    lv_obj_add_flag(bottom_label_, LV_OBJ_FLAG_HIDDEN);
-
-    // Halo 低电量提示（保持原有功能）
-    low_battery_popup_ = lv_obj_create(screen);
-    lv_obj_set_scrollbar_mode(low_battery_popup_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_set_size(low_battery_popup_, LV_HOR_RES * 0.9, style_.text_font->line_height * 2);
-    lv_obj_align(low_battery_popup_, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(low_battery_popup_, current_theme_.low_battery, 0);
-    lv_obj_set_style_border_width(low_battery_popup_, 0, 0);  // Halo UI 无边框
-    lv_obj_set_style_radius(low_battery_popup_, 10, 0);
-    low_battery_label_ = lv_label_create(low_battery_popup_);
-    lv_label_set_text(low_battery_label_, Lang::Strings::BATTERY_NEED_CHARGE);
-    lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
-    lv_obj_center(low_battery_label_);
-    lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
-
-    ESP_LOGI(TAG, "Enhanced Halo UI setup completed");
+    
+    ESP_LOGI(TAG, "Test layout completed - battery icon + idle1 GIF");
 }
 #endif
+
+void LcdDisplay::SetCustomGif(const lv_image_dsc_t* gif_src) {
+    if (!gif_widget_ || !gif_src) return;
+    
+    DisplayLockGuard lock(this);
+    lv_gif_set_src(gif_widget_, gif_src);
+    ESP_LOGI(TAG, "Custom GIF updated");
+}
+
+lv_obj_t* SpiLcdDisplay::GetGifWidget() {
+    // 返回当前的 GIF 控件，需要根据你的 HaloUI 实现来获取
+    // 假设你有一个成员变量 gif_widget_ 
+    return gif_widget_;  // 或者通过其他方式获取
+}
 

@@ -1,4 +1,3 @@
-#include "misc/lv_color.h"
 #ifdef __has_include
     #if __has_include("lvgl.h")
         #ifndef LV_LVGL_H_INCLUDE_SIMPLE
@@ -1623,13 +1622,11 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_IDLE_STAT
     0x00, 0x05, 0x04, 0xe0, 0x25, 0x5e, 0x21, 0x00, 0x3b
 };
 
-
-const lv_image_dsc_t idle_status_1 = {
-    .header.cf = LV_COLOR_FORMAT_RGB565,
-    .header.magic = LV_IMAGE_HEADER_MAGIC,
-    .header.w = 176,
-    .header.h = 120,
-    .data_size = 20770,
-    .data = idle_status_1_map,
+const lv_img_dsc_t idle_status_1 = {
+  .header.cf = LV_IMAGE_HEADER_MAGIC,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
+  .header.w = 176,
+  .header.h = 120,
+  .data_size = 20770,
+  .data = idle_status_1_map,
 };
-
