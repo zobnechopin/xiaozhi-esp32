@@ -1,0 +1,5 @@
+---
+description:这是一个 ESP32S3 项目，主要目标是构建一个一套对话服务，每次修改需要思考的全面，仅返回关键修改代码即可。
+globs:
+alwaysApply: true
+---

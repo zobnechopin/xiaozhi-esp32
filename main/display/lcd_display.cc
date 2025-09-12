@@ -1130,7 +1130,14 @@ void LcdDisplay::SetupHaloUI() {
         lv_img_set_src(battery_icon, &battery_low);  // 使用 battery_low 图标
         lv_obj_align(battery_icon, LV_ALIGN_TOP_MID, 0, 10);  // 顶部居中，向下10像素
         lv_obj_clear_flag(battery_icon, LV_OBJ_FLAG_HIDDEN);
-        ESP_LOGI(TAG, "Battery low icon should be visible at top");
+        
+        // 添加红色边框用于调试 - 显示电池图标的实际区域
+        lv_obj_set_style_border_color(battery_icon, lv_color_hex(0xFF0000), 0);  // 红色边框
+        lv_obj_set_style_border_width(battery_icon, 3, 0);
+        lv_obj_set_style_bg_opa(battery_icon, LV_OPA_20, 0);  // 添加半透明背景
+        lv_obj_set_style_bg_color(battery_icon, lv_color_hex(0x000000), 0);
+        
+        ESP_LOGI(TAG, "Battery low icon should be visible at top with red border");
     } else {
         ESP_LOGE(TAG, "Failed to create battery icon widget");
     }
@@ -1143,6 +1150,12 @@ void LcdDisplay::SetupHaloUI() {
         lv_obj_set_size(gif_widget_, 176, 120);
         lv_obj_align(gif_widget_, LV_ALIGN_CENTER, 0, 20);  // 中央，向下偏移20像素给电池图标留空间
         
+        // 添加绿色边框用于调试 - 显示GIF的实际区域
+        lv_obj_set_style_border_color(gif_widget_, lv_color_hex(0x00FF00), 0);  // 绿色边框
+        lv_obj_set_style_border_width(gif_widget_, 3, 0);
+        lv_obj_set_style_bg_opa(gif_widget_, LV_OPA_20, 0);  // 添加半透明背景
+        lv_obj_set_style_bg_color(gif_widget_, lv_color_hex(0x000000), 0);
+        
         // 测试 sleep_loop GIF
         ESP_LOGI(TAG, "Loading sleep_loop GIF...");
         ESP_LOGI(TAG, "sleep_loop data_size: %u", (unsigned int)sleep_loop.data_size);
@@ -1150,12 +1163,12 @@ void LcdDisplay::SetupHaloUI() {
         lv_gif_set_src(gif_widget_, &sleep_loop);
         
         lv_obj_clear_flag(gif_widget_, LV_OBJ_FLAG_HIDDEN);
-        ESP_LOGI(TAG, "sleep_loop GIF should be visible in center");
+        ESP_LOGI(TAG, "sleep_loop GIF should be visible in center with green border");
     } else {
         ESP_LOGE(TAG, "Failed to create GIF widget!");
     }
     
-    ESP_LOGI(TAG, "Test layout completed - battery icon + idle1 GIF");
+    ESP_LOGI(TAG, "Test layout completed - battery icon + idle1 GIF with debug borders");
 }
 #endif
 
@@ -1164,7 +1177,14 @@ void LcdDisplay::SetCustomGif(const lv_image_dsc_t* gif_src) {
     
     DisplayLockGuard lock(this);
     lv_gif_set_src(gif_widget_, gif_src);
-    ESP_LOGI(TAG, "Custom GIF updated");
+    
+    // 重新应用绿色边框样式，因为 lv_gif_set_src 会重置样式
+    lv_obj_set_style_border_color(gif_widget_, lv_color_hex(0x00FF00), 0);  // 绿色边框
+    lv_obj_set_style_border_width(gif_widget_, 3, 0);
+    lv_obj_set_style_bg_opa(gif_widget_, LV_OPA_20, 0);  // 添加半透明背景
+    lv_obj_set_style_bg_color(gif_widget_, lv_color_hex(0x000000), 0);
+    
+    ESP_LOGI(TAG, "Custom GIF updated with green border");
 }
 
 lv_obj_t* SpiLcdDisplay::GetGifWidget() {

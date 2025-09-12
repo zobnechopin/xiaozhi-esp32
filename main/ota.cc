@@ -46,7 +46,7 @@ std::string Ota::GetCheckVersionUrl() {
     // if (url.empty()) {
     //     url = CONFIG_OTA_URL;
     // }
-    std::string url = "https://bot.acornaware.com/xiaozhi/ota/";
+    std::string url = "https://admin.bot.acornaware.com/api/v1/chip";
     return url;
 }
 

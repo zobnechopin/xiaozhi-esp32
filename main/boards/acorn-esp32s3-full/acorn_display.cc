@@ -2,6 +2,7 @@
 #include "acorn_assets.h"
 #include <esp_log.h>
 #include <libs/gif/lv_gif.h>
+#include <cstring>
 
 #define TAG "AcornDisplay"
 
@@ -15,6 +16,22 @@ AcornDisplay::AcornDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_han
     SetupCustomLayout();
 }
 
+void AcornDisplay::SetChatMessage(const char* role, const char* content) {
+    // 如果是系统消息，显示在底部区域
+    if (role && strcmp(role, "system") == 0) {
+        ESP_LOGI(TAG, "System message received: %s", content ? content : "(empty)");
+        SetBottomText(content);
+        return;
+    }
+    
+    // 对于其他类型的消息（user, assistant），调用父类的默认实现
+    // 但由于我们使用的是 Halo UI，这些消息通常不会显示在聊天区域
+    // 所以我们可以选择忽略它们，或者记录日志
+    if (role && content) {
+        ESP_LOGI(TAG, "Chat message [%s]: %s (ignored in Halo UI)", role, content);
+    }
+}
+
 void AcornDisplay::SetupCustomLayout() {
     DisplayLockGuard lock(this);
     
@@ -25,10 +42,23 @@ void AcornDisplay::SetupCustomLayout() {
     // 创建自定义 UI 对象，让它们覆盖在默认 UI 之上
     status_icon_ = lv_img_create(screen);
     lv_obj_align(status_icon_, LV_ALIGN_TOP_MID, 0, 5);
-    lv_obj_add_flag(status_icon_, LV_OBJ_FLAG_HIDDEN);
+    // 暂时不隐藏，方便调试
+    // lv_obj_add_flag(status_icon_, LV_OBJ_FLAG_HIDDEN);
+    
+    // 添加明显的边框用于调试 - 这样你就能看到 41x25 像素的电池图标区域
+    lv_obj_set_style_border_color(status_icon_, lv_color_hex(0xFF0000), 0);  // 红色边框
+    lv_obj_set_style_border_width(status_icon_, 3, 0);
+    lv_obj_set_style_bg_opa(status_icon_, LV_OPA_20, 0);  // 添加半透明背景
+    lv_obj_set_style_bg_color(status_icon_, lv_color_hex(0x000000), 0);
     
     center_gif_ = lv_gif_create(screen);
     lv_obj_align(center_gif_, LV_ALIGN_CENTER, 0, 0);
+    
+    // 添加明显的边框用于调试
+    lv_obj_set_style_border_color(center_gif_, lv_color_hex(0x00FF00), 0);  // 绿色边框
+    lv_obj_set_style_border_width(center_gif_, 3, 0);
+    lv_obj_set_style_bg_opa(center_gif_, LV_OPA_20, 0);  // 添加半透明背景
+    lv_obj_set_style_bg_color(center_gif_, lv_color_hex(0x000000), 0);
     
     // 创建底部容器
     bottom_container_ = lv_obj_create(screen);
@@ -37,6 +67,10 @@ void AcornDisplay::SetupCustomLayout() {
     lv_obj_set_style_bg_opa(bottom_container_, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bottom_container_, 0, 0);
     lv_obj_set_style_pad_all(bottom_container_, 5, 0);
+    
+    // 添加明显的边框用于调试
+    lv_obj_set_style_border_color(bottom_container_, lv_color_hex(0x0000FF), 0);  // 蓝色边框
+    lv_obj_set_style_border_width(bottom_container_, 3, 0);
     
     // 创建底部图片
     bottom_image_ = lv_img_create(bottom_container_);
@@ -47,6 +81,8 @@ void AcornDisplay::SetupCustomLayout() {
     bottom_label_ = lv_label_create(bottom_container_);
     lv_obj_align(bottom_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_text_align(bottom_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(bottom_label_, lv_color_white(), 0);  // 设置文字颜色为白色
+    lv_obj_set_style_text_font(bottom_label_, style_.text_font, 0);   // 使用样式中的字体
     lv_obj_add_flag(bottom_label_, LV_OBJ_FLAG_HIDDEN);
     
     ESP_LOGI(TAG, "Custom layout setup completed");
@@ -107,7 +143,7 @@ void AcornDisplay::SetBottomContent(const char* content_name) {
 void AcornDisplay::SetBottomText(const char* text) {
     DisplayLockGuard lock(this);
     
-    if (!text) {
+    if (!text || strlen(text) == 0) {
         ClearBottomContent();
         return;
     }
@@ -127,6 +163,21 @@ void AcornDisplay::ClearBottomContent() {
     DisplayLockGuard lock(this);
     lv_obj_add_flag(bottom_image_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(bottom_label_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void AcornDisplay::SetCustomGif(const lv_image_dsc_t* gif_src) {
+    if (!center_gif_ || !gif_src) return;
+    
+    DisplayLockGuard lock(this);
+    lv_gif_set_src(center_gif_, gif_src);
+    
+    // 重新应用绿色边框样式，因为 lv_gif_set_src 会重置样式
+    lv_obj_set_style_border_color(center_gif_, lv_color_hex(0x00FF00), 0);  // 绿色边框
+    lv_obj_set_style_border_width(center_gif_, 3, 0);
+    lv_obj_set_style_bg_opa(center_gif_, LV_OPA_20, 0);  // 添加半透明背景
+    lv_obj_set_style_bg_color(center_gif_, lv_color_hex(0x000000), 0);
+    
+    ESP_LOGI(TAG, "Custom GIF updated with green border");
 }
 
 void AcornDisplay::ClearAll() {

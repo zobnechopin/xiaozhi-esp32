@@ -193,8 +193,11 @@ private:
         esp_lcd_panel_mirror(panel_, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
         esp_lcd_panel_disp_on_off(panel_, true);
         
-        // 直接使用 SpiLcdDisplay，它会自动调用 HaloUI
-        display_ = new SpiLcdDisplay(panel_io_, panel_, 240, 240, 0, 0, false, false, false);
+        // 使用 AcornDisplay 替代 SpiLcdDisplay，使用 config.h 中的镜像设置
+        acorn_display_ = new AcornDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT, 
+                                        DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, 
+                                        DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
+        display_ = acorn_display_;  // 将 AcornDisplay 赋值给基类指针
         
         // 创建后设置自定义样式
         EmojiCollection* emoji_collection = DISPLAY_HEIGHT >= 240 ? 
@@ -237,7 +240,7 @@ private:
 public:
     AcornESP32S3Full() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeSpi();
-        InitializeLcdDisplay();  // 这里创建 SpiLcdDisplay + HaloUI
+        InitializeLcdDisplay();  // 这里创建 AcornDisplay + HaloUI
         InitializeButtons();
         InitializePowerManager();
         InitializePowerSaveTimer();
@@ -250,7 +253,7 @@ public:
         }
         
         // 使用 HaloUI + 我们的控制器
-        display_controller_ = new AcornDisplayController(static_cast<SpiLcdDisplay*>(display_));
+        display_controller_ = new AcornDisplayController(acorn_display_);
         display_controller_->ForceIdle();
     }
 
