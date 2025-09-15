@@ -125,11 +125,66 @@ private:
     }
     void InitializePowerManager() {
         power_manager_ = new PowerManager(GPIO_NUM_19);
+        
+        // 添加初始状态打印
+        ESP_LOGI(TAG, "Initializing PowerManager with charging pin: GPIO_NUM_19");
+        ESP_LOGI(TAG, "Initial charging status: %s", power_manager_->IsCharging() ? "Charging" : "Not charging");
+        ESP_LOGI(TAG, "Initial battery level: %d%%", power_manager_->GetBatteryLevel());
+        
         power_manager_->OnChargingStatusChanged([this](bool is_charging) {
+            ESP_LOGI(TAG, "=== CHARGING STATUS CHANGED ===");
+            ESP_LOGI(TAG, "Charging status: %s", is_charging ? "CHARGING" : "NOT CHARGING");
+            ESP_LOGI(TAG, "Battery level: %d%%", power_manager_->GetBatteryLevel());
+            ESP_LOGI(TAG, "GPIO_NUM_19 level: %d", gpio_get_level(GPIO_NUM_19));
+            ESP_LOGI(TAG, "===============================");
+            
+            // 显示充电状态
+            if (display_controller_) {
+                if (is_charging) {
+                    display_controller_->SetBottomText("正在充电...");
+                    // 不设置超时，让充电状态持续显示
+                } else {
+                    display_controller_->ClearBottomArea();
+                }
+            }
+            
             if (is_charging) {
                 power_save_timer_->SetEnabled(false);
             } else {
                 power_save_timer_->SetEnabled(true);
+            }
+        });
+        
+        // 添加定期状态打印
+        power_manager_->OnLowBatteryStatusChanged([this](bool is_low_battery) {
+            ESP_LOGI(TAG, "Low battery status changed: %s", is_low_battery ? "LOW" : "NORMAL");
+            ESP_LOGI(TAG, "Current battery level: %d%%", power_manager_->GetBatteryLevel());
+            
+            // 添加显示控制逻辑
+            if (display_controller_) {
+                if (is_low_battery) {
+                    // 使用状态机，会自动播放 start -> loop 序列
+                    display_controller_->SetDeviceState(DeviceDisplayState::BATTERY_LOW);
+                } else {
+                    // 播放结束动画然后返回IDLE
+                    display_controller_->SetCustomDisplay("lowbat_end", nullptr, nullptr, nullptr);
+                    // 延迟后返回IDLE
+                    esp_timer_create_args_t end_timer_args = {
+                        .callback = [](void* arg) {
+                            AcornESP32S3Full* board = static_cast<AcornESP32S3Full*>(arg);
+                            if (board && board->display_controller_) {
+                                board->display_controller_->ForceIdle();
+                            }
+                        },
+                        .arg = this,
+                        .dispatch_method = ESP_TIMER_TASK,
+                        .name = "lowbat_end_timer",
+                        .skip_unhandled_events = true,
+                    };
+                    esp_timer_handle_t end_timer;
+                    esp_timer_create(&end_timer_args, &end_timer);
+                    esp_timer_start_once(end_timer, 2000000); // 2秒后返回IDLE
+                }
             }
         });
     }
@@ -199,6 +254,9 @@ private:
                                         DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
         display_ = acorn_display_;  // 将 AcornDisplay 赋值给基类指针
         
+        // 创建显示控制器
+        display_controller_ = new AcornDisplayController(acorn_display_);
+        
         // 创建后设置自定义样式
         EmojiCollection* emoji_collection = DISPLAY_HEIGHT >= 240 ? 
             static_cast<EmojiCollection*>(new Twemoji64()) : 
@@ -253,7 +311,6 @@ public:
         }
         
         // 使用 HaloUI + 我们的控制器
-        display_controller_ = new AcornDisplayController(acorn_display_);
         display_controller_->ForceIdle();
     }
 
@@ -293,13 +350,32 @@ public:
     }
     virtual bool GetBatteryLevel(int& level, bool& charging, bool& discharging) override {
         static bool last_discharging = false;
+        static int last_level = -1;
+        static bool last_charging = false;
+        
         charging = power_manager_->IsCharging();
         discharging = power_manager_->IsDischarging();
+        level = power_manager_->GetBatteryLevel();
+        
+        // 打印详细状态信息
+        if (level != last_level || charging != last_charging || discharging != last_discharging) {
+            ESP_LOGI(TAG, "=== BATTERY STATUS UPDATE ===");
+            ESP_LOGI(TAG, "Battery Level: %d%%", level);
+            ESP_LOGI(TAG, "Charging: %s", charging ? "YES" : "NO");
+            ESP_LOGI(TAG, "Discharging: %s", discharging ? "YES" : "NO");
+            ESP_LOGI(TAG, "GPIO_NUM_19 (charging pin): %d", gpio_get_level(GPIO_NUM_19));
+            ESP_LOGI(TAG, "=============================");
+            
+            last_level = level;
+            last_charging = charging;
+            last_discharging = discharging;
+        }
+        
         if (discharging != last_discharging) {
             power_save_timer_->SetEnabled(discharging);
             last_discharging = discharging;
         }
-        level = power_manager_->GetBatteryLevel();
+        
         return true;
     }
 
@@ -313,6 +389,35 @@ public:
     // 新增：获取显示控制器的接口
     AcornDisplayController* GetDisplayController() {
         return display_controller_;
+    }
+
+private:
+    void StartBootSequence() {
+        ESP_LOGI(TAG, "Starting boot sequence...");
+        
+        // 使用 SetCustomDisplay 一行代码完成启动显示
+        if (display_controller_) {
+            display_controller_->SetCustomDisplay("switch_on", nullptr, "启动中...", nullptr);
+            
+            // 创建定时器，在 switch_on GIF 播放完成后切换到 IDLE 状态
+            esp_timer_create_args_t boot_timer_args = {
+                .callback = [](void* arg) {
+                    AcornESP32S3Full* board = static_cast<AcornESP32S3Full*>(arg);
+                    if (board && board->display_controller_) {
+                        ESP_LOGI("AcornESP32S3Full", "Boot sequence completed, entering IDLE state");
+                        board->display_controller_->ForceIdle();
+                    }
+                },
+                .arg = this,
+                .dispatch_method = ESP_TIMER_TASK,
+                .name = "boot_sequence_timer",
+                .skip_unhandled_events = true,
+            };
+            
+            esp_timer_handle_t boot_timer;
+            esp_timer_create(&boot_timer_args, &boot_timer);
+            esp_timer_start_once(boot_timer, 3000000); // 3秒后切换到IDLE
+        }
     }
 };
 

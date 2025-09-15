@@ -45,20 +45,20 @@ void AcornDisplay::SetupCustomLayout() {
     // 暂时不隐藏，方便调试
     // lv_obj_add_flag(status_icon_, LV_OBJ_FLAG_HIDDEN);
     
-    // 添加明显的边框用于调试 - 这样你就能看到 41x25 像素的电池图标区域
-    lv_obj_set_style_border_color(status_icon_, lv_color_hex(0xFF0000), 0);  // 红色边框
-    lv_obj_set_style_border_width(status_icon_, 3, 0);
-    lv_obj_set_style_bg_opa(status_icon_, LV_OPA_20, 0);  // 添加半透明背景
-    lv_obj_set_style_bg_color(status_icon_, lv_color_hex(0x000000), 0);
+    // 移除调试边框，避免重复显示
+    // lv_obj_set_style_border_color(status_icon_, lv_color_hex(0xFF0000), 0);  // 红色边框
+    // lv_obj_set_style_border_width(status_icon_, 3, 0);
+    // lv_obj_set_style_bg_opa(status_icon_, LV_OPA_20, 0);  // 添加半透明背景
+    // lv_obj_set_style_bg_color(status_icon_, lv_color_hex(0x000000), 0);
     
     center_gif_ = lv_gif_create(screen);
-    lv_obj_align(center_gif_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(center_gif_, LV_ALIGN_CENTER, 0, -10);  // 向上移动10像素
     
-    // 添加明显的边框用于调试
-    lv_obj_set_style_border_color(center_gif_, lv_color_hex(0x00FF00), 0);  // 绿色边框
-    lv_obj_set_style_border_width(center_gif_, 3, 0);
-    lv_obj_set_style_bg_opa(center_gif_, LV_OPA_20, 0);  // 添加半透明背景
-    lv_obj_set_style_bg_color(center_gif_, lv_color_hex(0x000000), 0);
+    // 移除调试边框
+    // lv_obj_set_style_border_color(center_gif_, lv_color_hex(0x00FF00), 0);  // 绿色边框
+    // lv_obj_set_style_border_width(center_gif_, 3, 0);
+    // lv_obj_set_style_bg_opa(center_gif_, LV_OPA_20, 0);  // 添加半透明背景
+    // lv_obj_set_style_bg_color(center_gif_, lv_color_hex(0x000000), 0);
     
     // 创建底部容器
     bottom_container_ = lv_obj_create(screen);
@@ -96,9 +96,11 @@ void AcornDisplay::SetStatusIcon(const char* icon_name) {
         return;
     }
     
-    const lv_img_dsc_t* icon = AcornAssets::GetStatusIcon(icon_name);
+    // 使用现有的 GetIcon 方法，但需要类型转换
+    const lv_image_dsc_t* icon = AcornAssets::GetIcon(icon_name);
     if (icon) {
-        lv_img_set_src(status_icon_, icon);
+        // 需要将 lv_image_dsc_t* 转换为 lv_img_dsc_t*
+        lv_img_set_src(status_icon_, (const lv_img_dsc_t*)icon);
         lv_obj_remove_flag(status_icon_, LV_OBJ_FLAG_HIDDEN);
         ESP_LOGI(TAG, "Set status icon: %s", icon_name);
     } else {
@@ -110,14 +112,26 @@ void AcornDisplay::SetStatusIcon(const char* icon_name) {
 void AcornDisplay::SetCenterGif(const char* gif_name) {
     DisplayLockGuard lock(this);
     
-    if (!gif_name) return;
+    if (!gif_name) {
+        // 如果没有指定 GIF，隐藏当前 GIF
+        if (center_gif_) {
+            lv_obj_add_flag(center_gif_, LV_OBJ_FLAG_HIDDEN);
+        }
+        return;
+    }
     
     const lv_img_dsc_t* gif = AcornAssets::GetGif(gif_name);
     if (gif) {
+        // 先显示 GIF 对象，然后设置新的源
+        lv_obj_clear_flag(center_gif_, LV_OBJ_FLAG_HIDDEN);
         lv_gif_set_src(center_gif_, gif);
         ESP_LOGI(TAG, "Set center GIF: %s", gif_name);
     } else {
         ESP_LOGW(TAG, "GIF not found: %s", gif_name);
+        // 如果找不到 GIF，隐藏当前显示
+        if (center_gif_) {
+            lv_obj_add_flag(center_gif_, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
@@ -129,9 +143,11 @@ void AcornDisplay::SetBottomContent(const char* content_name) {
         return;
     }
     
-    const lv_img_dsc_t* icon = AcornAssets::GetBottomIcon(content_name);
+    // 使用现有的 GetIcon 方法，但需要类型转换
+    const lv_image_dsc_t* icon = AcornAssets::GetIcon(content_name);
     if (icon) {
-        lv_img_set_src(bottom_image_, icon);
+        // 需要将 lv_image_dsc_t* 转换为 lv_img_dsc_t*
+        lv_img_set_src(bottom_image_, (const lv_img_dsc_t*)icon);
         lv_obj_remove_flag(bottom_image_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(bottom_label_, LV_OBJ_FLAG_HIDDEN);  // 隐藏文字
         ESP_LOGI(TAG, "Set bottom icon: %s", content_name);
@@ -180,7 +196,24 @@ void AcornDisplay::SetCustomGif(const lv_image_dsc_t* gif_src) {
     ESP_LOGI(TAG, "Custom GIF updated with green border");
 }
 
+void AcornDisplay::ClearCenterGif() {
+    DisplayLockGuard lock(this);
+    
+    if (center_gif_) {
+        lv_gif_set_src(center_gif_, nullptr);  // 停止GIF动画
+        lv_obj_add_flag(center_gif_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void AcornDisplay::ClearAll() {
+    DisplayLockGuard lock(this);
+    
+    // 清除状态图标
     ClearStatusIcon();
+    
+    // 清除底部内容
     ClearBottomContent();
+    
+    // 停止并清除中心 GIF 动画
+    ClearCenterGif();
 }

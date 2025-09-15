@@ -30,7 +30,17 @@ private:
     void CheckBatteryStatus() {
         // Get charging status
         bool new_charging_status = gpio_get_level(charging_pin_) == 0;
+        
+        // 添加详细的GPIO状态打印
+        int gpio_level = gpio_get_level(charging_pin_);
+        ESP_LOGI("PowerManager", "GPIO_%d level: %d, charging: %s", 
+                 charging_pin_, gpio_level, new_charging_status ? "YES" : "NO");
+        
         if (new_charging_status != is_charging_) {
+            ESP_LOGI("PowerManager", "Charging status changed from %s to %s", 
+                     is_charging_ ? "charging" : "not charging",
+                     new_charging_status ? "charging" : "not charging");
+            
             is_charging_ = new_charging_status;
             if (on_charging_status_changed_) {
                 on_charging_status_changed_(is_charging_);

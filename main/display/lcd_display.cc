@@ -14,8 +14,6 @@
 #include "board.h"
 #ifdef CONFIG_ENABLE_HALO_UI
 #include "boards/acorn-esp32s3-full/facetest.h"  // 使用已验证的 facetest
-#include "boards/acorn-esp32s3-full/idle_1.h"  // 添加新的头文件
-#include "boards/acorn-esp32s3-full/gifs/sleep_loop.h"  // 添加 sleep_loop 头文件
 
 // 直接声明 battery_low，避免包含问题
 extern const lv_image_dsc_t battery_low;
@@ -1156,14 +1154,17 @@ void LcdDisplay::SetupHaloUI() {
         lv_obj_set_style_bg_opa(gif_widget_, LV_OPA_20, 0);  // 添加半透明背景
         lv_obj_set_style_bg_color(gif_widget_, lv_color_hex(0x000000), 0);
         
-        // 测试 sleep_loop GIF
-        ESP_LOGI(TAG, "Loading sleep_loop GIF...");
-        ESP_LOGI(TAG, "sleep_loop data_size: %u", (unsigned int)sleep_loop.data_size);
-        ESP_LOGI(TAG, "sleep_loop header.cf: 0x%x", (unsigned int)sleep_loop.header.cf);
-        lv_gif_set_src(gif_widget_, &sleep_loop);
+        // 移除 sleep_loop 测试代码，因为对应的资源文件不存在
+        // ESP_LOGI(TAG, "Loading sleep_loop GIF...");
+        // ESP_LOGI(TAG, "sleep_loop data_size: %u", (unsigned int)sleep_loop.data_size);
+        // ESP_LOGI(TAG, "sleep_loop header.cf: 0x%x", (unsigned int)sleep_loop.header.cf);
+        // lv_gif_set_src(gif_widget_, &sleep_loop);
+        
+        // 使用默认的 facetest 资源
+        lv_gif_set_src(gif_widget_, &facetest);
         
         lv_obj_clear_flag(gif_widget_, LV_OBJ_FLAG_HIDDEN);
-        ESP_LOGI(TAG, "sleep_loop GIF should be visible in center with green border");
+        ESP_LOGI(TAG, "Default GIF should be visible in center with green border");
     } else {
         ESP_LOGE(TAG, "Failed to create GIF widget!");
     }

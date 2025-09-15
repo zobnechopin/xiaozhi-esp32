@@ -21,6 +21,7 @@ public:
     
     // 清空方法
     void ClearStatusIcon();
+    void ClearCenterGif();        // 新增：只清除中心GIF
     void ClearBottomContent();
     void ClearAll();
 

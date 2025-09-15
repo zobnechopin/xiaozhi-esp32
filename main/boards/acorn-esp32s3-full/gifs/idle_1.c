@@ -17,6 +17,10 @@
 #define LV_ATTRIBUTE_MEM_ALIGN
 #endif
 
+#ifndef LV_ATTRIBUTE_LARGE_CONST
+#define LV_ATTRIBUTE_LARGE_CONST
+#endif
+
 #ifndef LV_ATTRIBUTE_IMG_IDLE_1
 #define LV_ATTRIBUTE_IMG_IDLE_1
 #endif
@@ -990,11 +994,11 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_IDLE_1 ui
     0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x5c, 0x01, 0x00, 0x3b
 };
 
-const lv_image_dsc_t idle_1 = {
-    .header.cf = LV_IMAGE_HEADER_MAGIC,  // 改为 GIF 格式
-    .header.magic = LV_IMAGE_HEADER_MAGIC,  // 添加 magic 字段
-    .header.w = 176,
-    .header.h = 120,
-    .data_size = 12555,
-    .data = idle_1_map,
+const lv_img_dsc_t idle_1 = {
+  .header.cf = LV_IMAGE_HEADER_MAGIC,  // 改为 GIF 格式
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
+  .header.w = 176,
+  .header.h = 120,
+  .data_size = 12555,
+  .data = idle_1_map,
 };

@@ -1,5 +1,7 @@
 #pragma once
 #include "../../display/lcd_display.h"
+#include "acorn_display.h"
+#include "../../device_state.h"  // 添加这个头文件
 #include <esp_timer.h>
 #include <map>
 #include <vector>
@@ -26,11 +28,14 @@ struct DisplayConfig {
 
 class AcornDisplayController {
 public:
-    AcornDisplayController(SpiLcdDisplay* display);
+    AcornDisplayController(AcornDisplay* display);
     ~AcornDisplayController();
     
     // 主要接口：设置设备状态
     void SetDeviceState(DeviceDisplayState state);
+    
+    // 新增：从Application的DeviceState映射到DeviceDisplayState
+    void SetDeviceState(DeviceState state);
     
     // 兼容原有接口
     void SetEmotion(const char* emotion);
@@ -40,7 +45,7 @@ public:
                       const char* bottom_content = nullptr, const char* bottom_text = nullptr,
                       int timeout_ms = 3000);
     
-    // 强制返回IDLE状态
+    // 强制进入IDLE状态
     void ForceIdle();
     
     // === 新增：独立区域控制方法 ===
@@ -60,7 +65,7 @@ public:
     void SetStatusOverlay(const char* icon_name, int duration_ms = 0);  // 临时显示状态图标
     void SetBottomOverlay(const char* text, int duration_ms = 0);       // 临时显示底部文字
     
-    // 组合控制
+    // 组合控制 - 保留这个方法
     void SetCustomDisplay(const char* gif_name = nullptr, 
                          const char* status_icon = nullptr,
                          const char* bottom_text = nullptr,
@@ -74,7 +79,8 @@ public:
 private:
     void ApplyDisplayConfig(const DisplayConfig& config);
     void SetupStateMapping();
-    // 撤回 UpdateDisplay() 中的过渡效果
+    void SetupEmotionMapping();
+    void SetupDeviceStateMapping();  // 新增：设置DeviceState到DeviceDisplayState的映射
     void UpdateDisplay();
     
     // 辅助方法声明
@@ -87,33 +93,25 @@ private:
     bool HasBottomTextOverride() const;
     bool HasBottomIconOverride() const;
     bool HasVolumeOverride() const;
-    // 注意：HasStatusOverride() 已经在 public 部分定义了，不要重复声明
     
     // 定时器回调
     static void TimeoutCallback(void* arg);
     static void OverlayTimeoutCallback(void* arg);
     
-    SpiLcdDisplay* display_;  // 改为 SpiLcdDisplay*
+    AcornDisplay* display_;
     DeviceDisplayState current_state_;
     DeviceDisplayState previous_state_;
     esp_timer_handle_t timeout_timer_;
-    esp_timer_handle_t overlay_timer_;  // 新增：覆盖层定时器
+    esp_timer_handle_t overlay_timer_;
     
     // 状态映射表
     std::map<DeviceDisplayState, DisplayConfig> state_configs_;
     std::map<std::string, DeviceDisplayState> emotion_mapping_;
+    std::map<DeviceState, DeviceDisplayState> device_state_mapping_;  // 新增：DeviceState映射
     
     // 新增：独立覆盖设置
     std::string current_status_override_;       // 当前状态图标覆盖
     std::string current_gif_override_;          // 当前GIF覆盖
     std::string current_bottom_text_override_;  // 当前底部文字覆盖
     std::string current_bottom_icon_override_;  // 当前底部图标覆盖
-
-private:
-    // 删除这些过渡相关的成员和方法
-    // std::function<void()> fade_out_callback_;
-    // void SetGifWithFadeTransition(const lv_image_dsc_t* gif, const char* gif_name);
-    // void OnFadeOutComplete();
-    
-    // ... 保留其他现有成员 ...
 };

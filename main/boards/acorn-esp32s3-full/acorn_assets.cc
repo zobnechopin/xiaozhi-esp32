@@ -4,47 +4,61 @@
 #include <map>
 #include <string>
 
+// 只包含头文件，不包含 .c 文件
+// 编译器会自动链接对应的 .c 文件
+
 namespace AcornAssets {
-
-const lv_image_dsc_t* GetGif(const char* name) {
-    static std::map<std::string, const lv_image_dsc_t*> gif_map;
+    // 资源映射表
+    std::map<std::string, const lv_img_dsc_t*> gif_map;
+    std::map<std::string, const lv_image_dsc_t*> icon_map;
     
-    if (gif_map.empty()) {
-        // 只包含已修复且能正常播放的 GIF
+    // 初始化资源映射表
+    void InitializeAssets() {
+        // GIF 资源映射
         gif_map["idle_1"] = &idle_1;
+        gif_map["idle_2"] = &idle_2;
+        gif_map["idle_blink"] = &idle_blink;
         gif_map["sleep_loop"] = &sleep_loop;
-        gif_map["facetest"] = &facetest;
+        gif_map["listen_start"] = &listen_start;
+        gif_map["listen_loop"] = &listen_loop;
+        gif_map["listen_end"] = &listen_end;
+        gif_map["talk_start"] = &talk_start;
+        gif_map["talk_loop"] = &talk_loop;
+        gif_map["talk_end"] = &talk_end;
+        gif_map["touch_start"] = &touch_start;
+        gif_map["touch_loop"] = &touch_loop;
+        gif_map["touch_end"] = &touch_end;
+        gif_map["lowbat_start"] = &lowbat_start;
+        gif_map["lowbat_loop"] = &lowbat_loop;
+        gif_map["lowbat_end"] = &lowbat_end;
+        gif_map["switch_on"] = &switch_on;
+        gif_map["switch_off"] = &switch_off;
         
-        // 待修复的 GIF（暂时注释）
-        // gif_map["idle_status_2"] = &idle_status_2;
-        // gif_map["listen_start"] = &listen_start;
-        // gif_map["talk_loop"] = &talk_loop;
-        // ... 其他待修复的
+        // 图标资源映射
+        icon_map["battery_full"] = &battery_full;
+        icon_map["battery_low"] = &battery_low;
+        icon_map["volume_high"] = &volume_high;
+        icon_map["volume_low"] = &volume_low;
+        icon_map["volume_mute"] = &volume_mute;
+        icon_map["wifi_connected"] = &wifi_connected;
+        icon_map["wifi_not_connected"] = &wifi_not_connected;
+        icon_map["wifi_error"] = &wifi_error;
+        icon_map["cellular_connected"] = &cellular_connected;
+        icon_map["cellular_not_connected"] = &cellular_not_connected;
+        icon_map["cellular_connected_error"] = &cellular_connected_error;
+        icon_map["bind_success"] = &bind_success;
+        icon_map["bind_error"] = &bind_error;
+        icon_map["network_loading"] = &network_loading;
     }
     
-    auto it = gif_map.find(name);
-    return (it != gif_map.end()) ? it->second : nullptr;
-}
-
-const lv_image_dsc_t* GetStatusIcon(const char* name) {
-    static std::map<std::string, const lv_image_dsc_t*> status_map;
-    
-    if (status_map.empty()) {
-        // 初始化映射表
-        status_map["volume_high"] = &volume_high;
-        status_map["volume_low"] = &volume_low;
-        status_map["volume_mute"] = &volume_mute;
-        status_map["battery_low"] = &battery_low;
-        status_map["battery_full"] = &battery_full;
+    // 资源获取函数
+    const lv_img_dsc_t* GetGif(const char* name) {
+        auto it = gif_map.find(name);
+        return (it != gif_map.end()) ? it->second : nullptr;
     }
     
-    auto it = status_map.find(name);
-    return (it != status_map.end()) ? it->second : nullptr;
-}
-
-const lv_image_dsc_t* GetBottomIcon(const char* name) {
-    // 暂时返回 nullptr，因为还没有底部图标资源
-    return nullptr;
-}
-
+    const lv_image_dsc_t* GetIcon(const char* name) {
+        auto it = icon_map.find(name);
+        return (it != icon_map.end()) ? it->second : nullptr;
+    }
 }
